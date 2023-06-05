@@ -1,2 +1,5 @@
 **/*memo*
 **/*tmp*
+./DataFuzzing/Data/build
+DataFuzzing/Data/dist
+!DataFuzzing/Data/dist/executable/executable
