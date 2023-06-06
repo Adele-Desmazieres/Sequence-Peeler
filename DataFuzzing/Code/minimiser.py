@@ -135,5 +135,6 @@ if __name__=='__main__' :
 	cutted_seqs = dichotomy_cut(seqs, executablename, desired_output)
 	print("\nInput minimisé : \n" + str(cutted_seqs))
 	seqs_to_file(cutted_seqs)
+	print("Done.")
 
 	
