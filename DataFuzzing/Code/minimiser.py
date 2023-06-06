@@ -54,6 +54,8 @@ def dichotomy_cut(seqs, exe, desired_output) :
 		tmp_seqs = {k:v for k,v in cutted_seqs.items() if k != specie}
 		if check_output(tmp_seqs, exe, desired_output) :
 			cutted_seqs = tmp_seqs
+			print(cutted_seqs)
+
 		
 		# il existe au moins un fragment de la séquence qui donne la sortie désirée
 		else :
