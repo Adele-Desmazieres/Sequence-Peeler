@@ -4,7 +4,7 @@ import string
 
 def no_three_same_letters(sequences) :
     for specie,seq in sequences.items() :
-        for i in range(len(seq) - 3) :
+        for i in range(len(seq) - 2) :
             if seq[i] == seq[i+1] and seq[i+1] == seq[i+2] :
                 raise Exception("Erreur obscure")
     return 1
