@@ -14,9 +14,14 @@ def seqs_to_file(seqs) :
 def check_output(seqs, exe, desired_output) :
 	seqs_to_file(seqs)
 	output = subprocess.run([exe, TMP_FILENAME], capture_output=True)
-	#print("Sortie capturée : " + str(output))
-	rcode = output.returncode
-	return rcode == desired_output
+
+	#print("Sortie réelle : " + str((output.returncode, output.stdout, output.stderr)))
+	
+	checkreturn = desired_output[0] == None or desired_output[0] == output.returncode
+	checkstdout = desired_output[1] == None or desired_output[1] == output.stdout
+	checkstderr = desired_output[2] == None or desired_output[2] == output.stderr
+
+	return (checkreturn and checkstdout and checkstderr)
 
 def dichotomy_cut_one_seq(seqs, specie, seq, icut, exe, desired_output) :
 	print(seqs, icut)
@@ -79,9 +84,15 @@ def parsing(filename) :
 if __name__=='__main__' :
 	filename = "../Data/example.fasta" # TODO : permettre l'execution depuis n'importe ou
 	executablename = "../Data/dist/executable/executable"
-	desired_output = 1
+
+	returncode = 1
+	stdout = None
+	stderr = None
+	desired_output = (returncode, stdout, stderr)
 	print("Sortie désirée : " + str(desired_output))
 
 	seqs = parsing(filename)
 	cutted_seqs = dichotomy_cut(seqs, executablename, desired_output)
 	print("Input minimisé : " + str(cutted_seqs))
+
+	
