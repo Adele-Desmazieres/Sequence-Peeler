@@ -1,8 +1,6 @@
 **/*memo*
 **/*tmp*
-Data/build/**/*.*
 Data/build/**/*
-Data/dist/executable/*.*
-Data/dist/executable/*
+Data/dist/*/*
 !Data/dist/executable/executable
 Data/executable.spec
