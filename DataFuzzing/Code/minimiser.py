@@ -6,7 +6,7 @@ TMP_FILENAME = "../tmp/tmp.fasta"
 
 
 
-# écrit les séquences et leurs espèces dans un fichier fasta
+# writes the sequences and their species in a fasta file
 def seqs_to_file(seqs) :
 	f2 = open(TMP_FILENAME, 'w')
 	for specie,seq in seqs.items() :
@@ -14,7 +14,8 @@ def seqs_to_file(seqs) :
 	f2.close()
 
 
-# vérifie que l'exécution de exe sur les séquences d'input donne la sortie désirée
+# check that the execution of exe with the sequences as input gives the desired output
+# TODO : execute on the cluster
 def check_output(seqs, exe, desired_output) :
 	seqs_to_file(seqs)
 	output = subprocess.run([exe, TMP_FILENAME], capture_output=True)
@@ -28,9 +29,9 @@ def check_output(seqs, exe, desired_output) :
 	return (checkreturn and checkstdout and checkstderr)
 
 
-# réduit les nucléotides de début ou de fin de la séquence
-# en coupant par sorte de dichotomie
-# renvoie la nouvelle séquence réduite
+# reduce the sequence by cutting begining or ending nucleotides
+# cutting in half succssively
+# returns the new reduced sequence
 def unequal_cut(seqs, specie, seq, exe, desired_output, imin, imax, flag_begining) :
 	tmp_seqs = seqs.copy()
 	imid = (imin + imax) // 2
@@ -57,12 +58,12 @@ def unequal_cut(seqs, specie, seq, exe, desired_output, imin, imax, flag_beginin
 	return seq[imin:] if flag_begining else seq[:imax]
 
 
-# renvoie le nouveau dictionnaire des séquences, avec la séquence de l'espèce "specie" réduite
+# returns the new sequences dict with the reducded sequenced of the specified specie
 def dichotomy_cut_one_seq(seqs, specie, seq, exe, desired_output) : # TODO suppr seq des args
 	icut = len(seq)//2
 	print(seqs, icut)
 
-	# si len(seq) = 0 alors il ne reste plus de caractères dans la séquence
+	# if theres no more nucleotide in the sequence, returns it
 	if (len(seq) == 0) :
 		return seqs
 	tmp_seqs = seqs.copy()
@@ -70,18 +71,18 @@ def dichotomy_cut_one_seq(seqs, specie, seq, exe, desired_output) : # TODO suppr
 	begining = seq[:icut]
 	end = seq[icut:]
 
-	# cas où la séquence fautive est au sein de la première moitié
+	# case where the target fragment is in the first half
 	tmp_seqs[specie] = begining
 	if check_output(tmp_seqs, exe, desired_output) :
 		return dichotomy_cut_one_seq(tmp_seqs, specie, begining, exe, desired_output)
 
-	# cas où la séquence fautive est au sein de la deuxième moitié
+	# case where the target fragment is in the second half
 	tmp_seqs[specie] = end
 	if check_output(tmp_seqs, exe, desired_output) :
 		return dichotomy_cut_one_seq(tmp_seqs, specie, end, exe, desired_output)
 	
-	# cas où la sortie est obtenue dans aucun des deux cas précédents
-	# soit il y a deux séquences co-fautives
+	# case where the desired output is not obtained in previous cases
+	# whether there is two target sequences in co-factor
 	del tmp_seqs[specie]
 	specie0 = specie+"0"
 	specie1 = specie+"1"
@@ -95,27 +96,27 @@ def dichotomy_cut_one_seq(seqs, specie, seq, exe, desired_output) : # TODO suppr
 	#del tmp_seqs[specie0]
 	#del tmp_seqs[specie1]
 
-	# soit la séquence fautive est au milieu de la coupe
+	# whether the target sequence is on both sides of the cut
 	tmp_seq = unequal_cut(seqs, specie, seq, exe, desired_output, 0, len(seq)//2, True)
-	seqs[specie] = tmp_seq # coupe du début
+	seqs[specie] = tmp_seq # cuts the begining
 	tmp_seq = unequal_cut(seqs, specie, tmp_seq, exe, desired_output, 0, len(tmp_seq), False)
-	seqs[specie] = tmp_seq # coupe de la fin
+	seqs[specie] = tmp_seq # cuts the end
 	return seqs
 
 
-# renvoie l'ensemble des séquences réduites
+# returns every reduced sequences
 def dichotomy_cut(seqs, exe, desired_output) :
 	cutted_seqs = seqs.copy()
 
 	for specie,seq in seqs.items() :
 		print(specie)
-		# tester si la sortie désirée persiste sans la séquence
+		# check if desired output is obtained whithout the sequence of the specie
 		tmp_seqs = {k:v for k,v in cutted_seqs.items() if k != specie}
 		if check_output(tmp_seqs, exe, desired_output) :
 			cutted_seqs = tmp_seqs
 			print(cutted_seqs)
 		
-		# il existe au moins un fragment de la séquence qui donne la sortie désirée
+		# otherwise reduces the sequence
 		else :
 			cutted_seqs = dichotomy_cut_one_seq(cutted_seqs, specie, seq, exe, desired_output)
 		
@@ -134,26 +135,36 @@ def parsing(filename) :
 						specie = line[1:].strip()
 						sequences[specie] = ""
 					elif specie != None : 
-						sequences[specie] += line # concaténation de line avec le string précédent
+						sequences[specie] += line # concatenate line to the previous string
 		return sequences
 
 	except IOError :
-		print("Fichier introuvable.")
+		print("File not found.")
+
+
+def get_args() :
+	filename = sys.argv[1]
+	executablename = sys.argv[2]
+	returncode = int(sys.argv[3])
+	return (filename, executablename, (returncode, None, None))
 
 
 if __name__=='__main__' :
-	filename = "../Data/example2.fasta" # TODO : permettre l'execution depuis n'importe ou
-	executablename = "../Data/dist/executable/executable"
+	#filename = "../Data/example2.fasta" 
+	#executablename = "../Data/dist/executable/executable"
 
-	returncode = 1
-	stdout = None
-	stderr = None
-	desired_output = (returncode, stdout, stderr)
-	print("Sortie désirée : " + str(desired_output))
+	#returncode = 1
+	#stdout = None
+	#stderr = None
+	#desired_output = (returncode, stdout, stderr)
+
+	filename, executablename, desired_output = get_args()
+
+	print("Desired output : " + str(desired_output))
 
 	seqs = parsing(filename)
 	cutted_seqs = dichotomy_cut(seqs, executablename, desired_output)
-	print("\nInput minimisé : \n" + str(cutted_seqs))
+	print("\nMinimised sequences : \n" + str(cutted_seqs))
 	seqs_to_file(cutted_seqs)
 	print("Done.")
 
