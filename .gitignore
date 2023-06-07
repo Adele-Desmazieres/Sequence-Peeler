@@ -1,6 +1,8 @@
 **/*memo*
 **/*tmp*
-DataFuzzing/Data/build
-DataFuzzing/Data/dist/executable/*
-!DataFuzzing/Data/dist/executable/executable
-DataFuzzing/Data/executable.spec
+Data/build/**/*.*
+Data/build/**/*
+Data/dist/**/*.*
+Data/dist/**/*
+!Data/dist/executable/executable
+Data/executable.spec
