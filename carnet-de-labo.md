@@ -6,9 +6,14 @@ Stage à l'Institut Pasteur dans l'équipe SeqBio, du 05/06/23 au 04/08/23.
 
 ## Liens utiles
 
-- https://email.pasteur.fr/owa/#path=/mail/inbox
+- Webcampus, the pasteur portal for everything: https://webcampus.pasteur.fr/
+- The webmail location: https://email.pasteur.fr/
+- Informatics resources: http://confluence.pasteur.fr/
+- Restaurant app: https://app.foodi.fr/
 
-## Lundi 5 juin
+--- 
+
+## Lundi 5 juin : premier jour
 
 ### Réunion avec Yoann Dufresne
 
@@ -65,10 +70,27 @@ Optimisation : ne pas optimiser prématurément. La complexité théorique ne re
 
 --- 
 
+## Mercredi 7 juin : réunion de projet
 
+- séparer le github du projet et le github du carnet de labo
+- documenter le projet en anglais : 
+    * faire un README qui explique comment le lancer
+    * documenter les foncions (commentaires suffisants ? -> traduits en anglais)
+    * faire un wiki qui explique l'implémentation algorithique du projet ainsi que les choix que je suis amenée à faire et leur raison
+- faire des exécutables variés : 
+    * match un pattern précis
+    * match une collection de patterns
+    * match des patterns qui se chevauchent
+    * match coocurrence de patterns à une distance spécifique
+    * match les k+1-mers dont le suffixe est inverse complément de leur préfixe (expl : k=5 ACCGGT)
+- utilisre les données du site ncbi avec le génome de Sars-cov2, de Ecoli et de l'humain
+- cluster :
+    * donner mon identifiant à Yoann pour qu'il me donne accès aux machines seqbio
+    * je ne vais pas faire des soumission de job au cluster mais requérir les ressources d'une machine ssh pour travailler directement dessus
+    * voir le manuel de `tmux [-a]` et  `salloc` que j'utiliserai à la place de `srun` et `sbatch`, et voir `ssh-copy-id` pour éviter de devoir rentrer mon mdp à chaque connexion
+    * utiliser ces commandes depuis la tête du cluster, accessible avec `ssh adesmazi@maestro.pasteur.fr` 
 
-
-
+--- 
 
 
 

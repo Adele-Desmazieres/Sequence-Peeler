@@ -29,8 +29,8 @@ def check_output(seqs, exe, desired_output) :
 	return (checkreturn and checkstdout and checkstderr)
 
 
-# reduce the sequence by cutting begining or ending nucleotides
-# cutting in half succssively
+# reduces the sequence by cutting begining or ending nucleotides
+# cutting in half successively
 # returns the new reduced sequence
 def unequal_cut(seqs, specie, seq, exe, desired_output, imin, imax, flag_begining) :
 	tmp_seqs = seqs.copy()
