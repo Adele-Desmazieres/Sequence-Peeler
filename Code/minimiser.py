@@ -3,12 +3,13 @@ import string
 import subprocess
 
 TMP_FILENAME = "../tmp/tmp.fasta"
+RESULTS_DIRECTORY = "../Results/"
 
 
 
 # writes the sequences and their species in a fasta file
-def seqs_to_file(seqs) :
-	f2 = open(TMP_FILENAME, 'w')
+def seqs_to_file(seqs, filename) :
+	f2 = open(filename, 'w')
 	for specie,seq in seqs.items() :
 		f2.write("> " + specie + "\n" + seq + "\n")
 	f2.close()
@@ -17,7 +18,7 @@ def seqs_to_file(seqs) :
 # check that the execution of exe with the sequences as input gives the desired output
 # TODO : execute on the cluster
 def check_output(seqs, exe, desired_output) :
-	seqs_to_file(seqs)
+	seqs_to_file(seqs, TMP_FILENAME)
 	output = subprocess.run([exe, TMP_FILENAME], capture_output=True)
 
 	#print("Sortie réelle : " + str((output.returncode, output.stdout, output.stderr)))
@@ -167,7 +168,7 @@ if __name__=='__main__' :
 	seqs = parsing(filename)
 	cutted_seqs = dichotomy_cut(seqs, executablename, desired_output)
 	print("\nMinimised sequences : \n" + str(cutted_seqs))
-	seqs_to_file(cutted_seqs)
+	seqs_to_file(cutted_seqs, RESULTS_DIRECTORY+"minimized.fasta")
 	print("Done.")
 
 	
