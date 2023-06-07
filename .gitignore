@@ -5,3 +5,4 @@ Data/dist/**/*
 !Data/dist/*/[^.]*
 !Data/dist/exe-one-pattern/exe-one-pattern
 Data/*.spec
+Results/**/*
