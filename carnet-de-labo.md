@@ -22,15 +22,15 @@ Stage à l'Institut Pasteur dans l'équipe SeqBio, du 05/06/23 au 04/08/23.
 
 #### Projet
 
-**Objectif du projet** : un outil de data fuzzing qui permet de trouver l'entrée minimale d'un logiciel provoquant une sortie spécifique. Plus précisément trouver la ou les fragments de séquences d'un fichier fasta qui provoquent une erreur avec le logiciel de Yoann, par exemple. 
+**Objectif du projet** : un outil de data fuzzing qui permet de trouver l'entrée minimale utilisée dans un logiciel provoquant une sortie spécifique. Plus précisément trouver la ou les fragments de séquences d'un fichier fasta qui provoquent une erreur avec n'importe quel logiciel.
 
-toto.fasta + binaire -> $ bin toto.fasta -> seg fault
+toto.fasta + binaire -> `$ bin toto.fasta` -> Segmentation Fault
 
-Mon logiciel permettrait d'isoler les lignes de tot.fasta provoquant l'erreur automatiquement, sans chercher à la main. 
+Mon logiciel permettrait d'isoler automatiquement les lignes de toto.fasta provoquant l'erreur, sans les chercher à la main. 
 
-**Principe** : l'outil prend une à une les séquences contenues dans le fichier fasta, et recherche l'exemple minimal provoquant le bug par algorithme de dichotomie. Découper la séquences en 2 sous-séquences de même taille, tester si le logiciel renvoie la sortie erreur sur la 1ere moitité, si oui répéter la recherche sur cette partie, si non tester l'autre moitié, et répéter la recherche dessus si elle renvoie une erreur. Si aucune des deux moitiées ne renvoie d'erreur, il y existe deux explications possibles : 
-- la séquence fautive est à la jonction des deux moitiées, dans ce cas il faut faire de la récurence sur une moitié centrale de la séquence
-- il y a deux séquences qui sont fautives quand elles sont ensemble, dans ce cas on sépare ces deux moitiées dans des séquences à part et on fait de la récurrence sur chacune d'entre elles
+**Principe** : l'outil prend une à une les séquences contenues dans le fichier fasta, et recherche l'exemple minimal provoquant le bug par algorithme de dichotomie. Découper la séquences en 2 sous-séquences de même taille, tester si le logiciel renvoie la sortie erreur sur la 1ere moitité, si oui répéter la recherche sur cette partie, si non tester l'autre moitié, et répéter la recherche dessus si elle renvoie une erreur. Si aucune des deux moitiées ne renvoie l'erreur, il y a deux explications possibles : 
+- soit la séquence fautive est à la jonction des deux moitiées, dans ce cas il faut faire de la récurence sur une moitié centrale de la séquence
+- soit il y a deux séquences qui sont fautives quand elles sont ensemble, dans ce cas on sépare ces deux moitiées dans des séquences à part et on fait de la récurrence sur chacune d'entre elles
 
 **Extensions possibles** : 
 - paralléliser l'exécution du binaire sur les fichiers fasta réduits
