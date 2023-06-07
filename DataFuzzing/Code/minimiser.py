@@ -6,13 +6,15 @@ TMP_FILENAME = "../tmp/tmp.fasta"
 
 
 
-
+# écrit les séquences et leurs espèces dans un fichier fasta
 def seqs_to_file(seqs) :
 	f2 = open(TMP_FILENAME, 'w')
 	for specie,seq in seqs.items() :
-		f2.write("> " + specie + "\n" + seq)
+		f2.write("> " + specie + "\n" + seq + "\n")
 	f2.close()
 
+
+# vérifie que l'exécution de exe sur les séquences d'input donne la sortie désirée
 def check_output(seqs, exe, desired_output) :
 	seqs_to_file(seqs)
 	output = subprocess.run([exe, TMP_FILENAME], capture_output=True)
@@ -26,6 +28,9 @@ def check_output(seqs, exe, desired_output) :
 	return (checkreturn and checkstdout and checkstderr)
 
 
+# réduit les nucléotides de début ou de fin de la séquence
+# en coupant par sorte de dichotomie
+# renvoie la nouvelle séquence réduite
 def unequal_cut(seqs, specie, seq, exe, desired_output, imin, imax, flag_begining) :
 	tmp_seqs = seqs.copy()
 	imid = (imin + imax) // 2
@@ -52,9 +57,9 @@ def unequal_cut(seqs, specie, seq, exe, desired_output, imin, imax, flag_beginin
 	return seq[imin:] if flag_begining else seq[:imax]
 
 
-
-
-def dichotomy_cut_one_seq(seqs, specie, seq, icut, exe, desired_output) :
+# renvoie le nouveau dictionnaire des séquences, avec la séquence de l'espèce "specie" réduite
+def dichotomy_cut_one_seq(seqs, specie, seq, exe, desired_output) : # TODO suppr seq des args
+	icut = len(seq)//2
 	print(seqs, icut)
 
 	# si len(seq) = 0 alors il ne reste plus de caractères dans la séquence
@@ -68,21 +73,37 @@ def dichotomy_cut_one_seq(seqs, specie, seq, icut, exe, desired_output) :
 	# cas où la séquence fautive est au sein de la première moitié
 	tmp_seqs[specie] = begining
 	if check_output(tmp_seqs, exe, desired_output) :
-		return dichotomy_cut_one_seq(tmp_seqs, specie, begining, len(begining)//2, exe, desired_output)
+		return dichotomy_cut_one_seq(tmp_seqs, specie, begining, exe, desired_output)
 
 	# cas où la séquence fautive est au sein de la deuxième moitié
 	tmp_seqs[specie] = end
 	if check_output(tmp_seqs, exe, desired_output) :
-		return dichotomy_cut_one_seq(tmp_seqs, specie, end, len(end)//2, exe, desired_output)
+		return dichotomy_cut_one_seq(tmp_seqs, specie, end, exe, desired_output)
 	
 	# cas où la sortie est obtenue dans aucun des deux cas précédents
-	tmp_seq = unequal_cut(seqs, specie, seq, exe, desired_output, 0, len(seq)//2, True)
-	seqs[specie] = tmp_seq
-	tmp_seq = unequal_cut(seqs, specie, tmp_seq, exe, desired_output, 0, len(tmp_seq), False)
-	seqs[specie] = tmp_seq
-	return seqs
-		
+	# soit il y a deux séquences co-fautives
+	del tmp_seqs[specie]
+	specie0 = specie+"0"
+	specie1 = specie+"1"
+	tmp_seqs[specie0] = begining
+	tmp_seqs[specie1] = end
+	if check_output(tmp_seqs, exe, desired_output) :
+		tmp_seqs = dichotomy_cut_one_seq(tmp_seqs, specie0, begining, exe, desired_output)
+		tmp_seqs = dichotomy_cut_one_seq(tmp_seqs, specie1, end, exe, desired_output)
+		return tmp_seqs
 
+	#del tmp_seqs[specie0]
+	#del tmp_seqs[specie1]
+
+	# soit la séquence fautive est au milieu de la coupe
+	tmp_seq = unequal_cut(seqs, specie, seq, exe, desired_output, 0, len(seq)//2, True)
+	seqs[specie] = tmp_seq # coupe du début
+	tmp_seq = unequal_cut(seqs, specie, tmp_seq, exe, desired_output, 0, len(tmp_seq), False)
+	seqs[specie] = tmp_seq # coupe de la fin
+	return seqs
+
+
+# renvoie l'ensemble des séquences réduites
 def dichotomy_cut(seqs, exe, desired_output) :
 	cutted_seqs = seqs.copy()
 
@@ -93,11 +114,10 @@ def dichotomy_cut(seqs, exe, desired_output) :
 		if check_output(tmp_seqs, exe, desired_output) :
 			cutted_seqs = tmp_seqs
 			print(cutted_seqs)
-
 		
 		# il existe au moins un fragment de la séquence qui donne la sortie désirée
 		else :
-			cutted_seqs = dichotomy_cut_one_seq(cutted_seqs, specie, seq, len(seq)//2, exe, desired_output)
+			cutted_seqs = dichotomy_cut_one_seq(cutted_seqs, specie, seq, exe, desired_output)
 		
 	return cutted_seqs
 
@@ -122,7 +142,7 @@ def parsing(filename) :
 
 
 if __name__=='__main__' :
-	filename = "../Data/example.fasta" # TODO : permettre l'execution depuis n'importe ou
+	filename = "../Data/example2.fasta" # TODO : permettre l'execution depuis n'importe ou
 	executablename = "../Data/dist/executable/executable"
 
 	returncode = 1

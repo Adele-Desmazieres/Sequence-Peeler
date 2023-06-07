@@ -3,10 +3,13 @@ import string
 
 
 def no_three_same_letters(sequences) :
+    c = 0
     for specie,seq in sequences.items() :
         for i in range(len(seq) - 2) :
             if seq[i] == seq[i+1] and seq[i+1] == seq[i+2] :
-                raise Exception("Erreur obscure")
+                c += 1
+                if c >= 2 :
+                    raise Exception("Erreur obscure")
     return 1
 
 # renvoie la représentation d'un fichier fasta sous forme d'un dict de header:seq
