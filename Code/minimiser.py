@@ -122,7 +122,9 @@ def dichotomy_cut(seqs, exe, desired_output) :
 		
 	return cutted_seqs
 
-
+# returns the representation of a fasta file by a dictionnary where
+# the key is the specie header, and the value is the specie sequence
+# for example : {"Fraise":"ATTCG", "Pomme":"GGGGCTC"}
 def parsing(filename) :
 	try :
 		with open(filename, 'r') as f :
