@@ -9,11 +9,12 @@ def no_three_same_letters(sequences) :
             if seq[i] == seq[i+1] and seq[i+1] == seq[i+2] :
                 c += 1
                 if c >= 2 :
-                    raise Exception("Erreur obscure")
+                    raise Exception("Error : two times three same following nucleotides in file. ")
     return 1
 
-# renvoie la représentation d'un fichier fasta sous forme d'un dict de header:seq
-# avec header en string et seq aussi, par exemple "Fraise":"ATTCGATGTGTGG"
+# returns the representation of a fasta file by a dictionnary where
+# the key is the specie header, and the value is the specie sequence
+# for example : {"Fraise":"ATTCG", "Pomme":"GGGGCTC"}
 def parsing(filename) :
     try :
         with open(filename, 'r') as f :
@@ -26,7 +27,7 @@ def parsing(filename) :
                         specie = line[1:].strip()
                         sequences[specie] = ""
                     elif specie != None : 
-                        sequences[specie] += line # concatennation de line avec le string précédent
+                        sequences[specie] += line # concatenate line to the previous string
         return sequences
 
     except IOError :
