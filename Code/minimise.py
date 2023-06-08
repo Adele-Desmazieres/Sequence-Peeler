@@ -92,7 +92,7 @@ def dichotomy_cut_one_seq_iter(seqs, sp_loc, exe, desired_output) :
 	found = False
 
 	while not found :
-		print(seqs)
+		#print(seqs)
 
 		seq = seqs[(specie, location)]
 
@@ -143,7 +143,8 @@ def dichotomy_cut(seqs, exe, desired_output) :
 	cutted_seqs = seqs.copy()
 
 	for sp_loc,seq in seqs.items() :
-		print("\n", sp_loc)
+		#print("\n", sp_loc)
+
 		# check if desired output is obtained whithout the sequence of the specie
 		tmp_seqs = {k:v for k,v in cutted_seqs.items() if k != sp_loc}
 		if check_output(tmp_seqs, exe, desired_output) :
@@ -192,6 +193,8 @@ def get_args() :
 
 
 if __name__=='__main__' :
+
+	# TODO ? lancer une fois l'executable sur tout le fichier pour check que l'output est bien possible ?
 
 	filename, executablename, desired_output = get_args()
 
