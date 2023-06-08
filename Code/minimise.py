@@ -31,39 +31,11 @@ def check_output(seqs, exe, desired_output) :
 
 
 # reduces the sequence by cutting begining or ending nucleotides
-# cutting in half successively
-# returns the new reduced sequence
-def unequal_cut(seqs, sp_loc, exe, desired_output, imin, imax, flag_begining) :
-	location = sp_loc[1]
-	seq = seqs[sp_loc]
-	tmp_seqs = seqs.copy()
-
-	imid = (imin + imax) // 2
-	print(seq, imin, imid, imax)
-
-	if flag_begining :
-		if imid == imin :
-			return (seq[imin:], location+imin)
-		tmp_seq = seq[imid:]
-	else :
-		if imid == imax :
-			return (seq[:imax], location)
-		tmp_seq = seq[:imid+1]
-	
-	tmp_seqs[sp_loc] = tmp_seq
-
-	if (check_output(tmp_seqs, exe, desired_output)) :
-		if flag_begining :
-			return unequal_cut(tmp_seqs, sp_loc, exe, desired_output, imid, imax, flag_begining)
-		else : 
-			return unequal_cut(tmp_seqs, sp_loc, exe, desired_output, imin, imid+1, flag_begining)
-	
-	return (seq[imin:], location+imin) if flag_begining else (seq[:imax], location)
-
-
+# cutting in half successively, with an iterative dichotomy
+# returns the new reduced sequence inside the dict sequences, and its new position
 def strip_sequence(seqs, sp_loc, exe, desired_output, flag_begining) :
 	seq = seqs[sp_loc]
-	seq_ret = seq
+	seq_ret = seq # the result when it will be reduced
 	loc_ret = sp_loc[1]
 	tmp_seqs = seqs.copy()
 	found = False
@@ -78,17 +50,16 @@ def strip_sequence(seqs, sp_loc, exe, desired_output, flag_begining) :
 	while not found :
 
 		imid = (imin + imax) // 2
+		# stopping condition
 		if imid == imin or imid == imax :
 			found = True
 
-		if flag_begining :
-			seq1 = seq[imid:]
-		else : 
-			seq1 = seq[:imid]
-		
 		#print(seq, imin, imid, imax)
+
+		seq1 = seq[imid:] if flag_begining else seq[:imid]
 		tmp_seqs[sp_loc] = seq1
 
+		# the cut maintained the output, we keep cutting toward the center of the sequence
 		if check_output(tmp_seqs, exe, desired_output) :
 			seq_ret = seq1
 			if flag_begining :
@@ -97,6 +68,7 @@ def strip_sequence(seqs, sp_loc, exe, desired_output, flag_begining) :
 			else :
 				imax = imid
 
+		# else the cut didn't maintain the output, we keep cutting toward the exterior
 		else :
 			tmp_seqs[sp_loc] = seq
 			if flag_begining :
@@ -104,63 +76,14 @@ def strip_sequence(seqs, sp_loc, exe, desired_output, flag_begining) :
 			else :
 				imin = imid
 	
+	# we delete the old sequence from the dict, and add the new one with its new position
 	del seqs[sp_loc]
 	seqs[(sp_loc[0], loc_ret)] = seq_ret
 	return seqs, loc_ret
 
 
-
-
-# NOT USED ANYMORE
 # returns the new sequences dict with the reduced sequenced of the specified specie
-# use recursive dichotomy
-def dichotomy_cut_one_seq(seqs, specie, seq, exe, desired_output) : # TODO suppr seq
-	icut = len(seq)//2
-	print(seqs, icut)
-
-	# if theres no more nucleotide in the sequence, returns it
-	if (len(seq) == 0) :
-		return seqs
-	tmp_seqs = seqs.copy()
-
-	begining = seq[:icut]
-	end = seq[icut:]
-
-	# case where the target fragment is in the first half
-	tmp_seqs[specie] = begining
-	if check_output(tmp_seqs, exe, desired_output) :
-		return dichotomy_cut_one_seq(tmp_seqs, specie, begining, exe, desired_output)
-
-	# case where the target fragment is in the second half
-	tmp_seqs[specie] = end
-	if check_output(tmp_seqs, exe, desired_output) :
-		return dichotomy_cut_one_seq(tmp_seqs, specie, end, exe, desired_output)
-	
-	# case where the desired output is not obtained in previous cases
-	# whether there is two target sequences in co-factor
-	del tmp_seqs[specie]
-	specie0 = specie+"0"
-	specie1 = specie+"1"
-	tmp_seqs[specie0] = begining
-	tmp_seqs[specie1] = end
-	if check_output(tmp_seqs, exe, desired_output) :
-		tmp_seqs = dichotomy_cut_one_seq(tmp_seqs, specie0, begining, exe, desired_output)
-		tmp_seqs = dichotomy_cut_one_seq(tmp_seqs, specie1, end, exe, desired_output)
-		return tmp_seqs
-
-	#del tmp_seqs[specie0]
-	#del tmp_seqs[specie1]
-
-	# whether the target sequence is on both sides of the cut
-	tmp_seq = unequal_cut(seqs, specie, exe, desired_output, 0, len(seq)//2, True)
-	seqs[specie] = tmp_seq # cuts the begining
-	tmp_seq = unequal_cut(seqs, specie, exe, desired_output, 0, len(tmp_seq), False)
-	seqs[specie] = tmp_seq # cuts the end
-	return seqs
-
-
-# returns the new sequences dict with the reduced sequenced of the specified specie
-# use iterativ dichotomy
+# use an iterative dichotomy
 def dichotomy_cut_one_seq_iter(seqs, sp_loc, exe, desired_output) : 
 
 	specie = sp_loc[0]
@@ -173,30 +96,31 @@ def dichotomy_cut_one_seq_iter(seqs, sp_loc, exe, desired_output) :
 
 		seq = seqs[(specie, location)]
 
+		# case where the target fragment is in the first half
 		seq0 = seq[:len(seq)//2]
 		seqs[(specie, location)] = seq0
 		if seq0 != seq and check_output(seqs, exe, desired_output) :
-			print("case 1")
 			continue
 		else :
 			del seqs[(specie, location)]
 
+		# case where the target fragment is in the second half
 		seq1 = seq[len(seq)//2:]
 		location_tmp += len(seq)//2
 		seqs[(specie, location_tmp)] = seq1
 		if seq1 != seq and check_output(seqs, exe, desired_output) :
-			print("case 2")
 			location = location_tmp
 			continue
 		else :
 			del seqs[(specie, location_tmp)]
 
+		# case where there is two sequences in co-factor in the sequence
+		# so we separate them under two different header
 		sp0 = (specie, location)
 		sp1 = (specie, location + len(seq)//2)
 		seqs[sp0] = seq0
 		seqs[sp1] = seq1
 		if check_output(seqs, exe, desired_output) :
-			print("case 3")
 			seqs = dichotomy_cut_one_seq_iter(seqs, sp0, exe, desired_output)
 			seqs = dichotomy_cut_one_seq_iter(seqs, sp1, exe, desired_output)
 			break
@@ -204,15 +128,8 @@ def dichotomy_cut_one_seq_iter(seqs, sp_loc, exe, desired_output) :
 			del seqs[sp0]
 			del seqs[sp1]
 
-		print("case 4")
-		#seq3 = seq
-		#loc3 = location
-		#seqs[(specie, loc3)] = seq3
-		#seq3, loc3 = strip_sequence(seqs, (specie, loc3), exe, desired_output, True)
-		#seqs[(specie, loc3)] = seq3
-		#seq3, loc3 = strip_sequence(seqs, (specie, loc3), exe, desired_output, False)
-		#seqs[(specie, loc3)] = seq3
-		#location = loc3
+		# case where the target sequence is on both sides of the cut
+		# so we strip first and last unnecessary nucleotids
 		seqs[(specie, location)] = seq
 		seqs, location = strip_sequence(seqs, (specie, location), exe, desired_output, True)
 		seqs, location = strip_sequence(seqs, (specie, location), exe, desired_output, False)
