@@ -1,7 +1,6 @@
 **/*memo*
 **/*tmp*
-Data/build/**/*
-Data/dist/**/*
-!Data/dist/*/[^.]*
+Data/build/
+Data/dist/
 Data/*.spec
 Results/**/*
