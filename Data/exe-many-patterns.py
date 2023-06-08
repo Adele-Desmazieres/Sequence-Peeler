@@ -3,13 +3,11 @@ import string
 
 
 def no_three_same_letters(sequences) :
-    c = 0
+    s = set(["ATC", "ACT", "TAC", "CAT", "CTA", "TCA"])
     for specie,seq in sequences.items() :
         for i in range(len(seq) - 2) :
-            if seq[i] == seq[i+1] and seq[i+1] == seq[i+2] :
-                c += 1
-                if c >= 2 :
-                    raise Exception("Error : two times three same following nucleotides in file. ")
+            if seq[i:i+3] in s :
+                raise Exception("Sequence " + seq[i:i+3] + " in " + str(s) + " found in file.")
     return 1
 
 # returns the representation of a fasta file by a dictionnary where

@@ -1,8 +1,7 @@
 **/*memo*
 **/*tmp*
-Data/build/**/*.*
 Data/build/**/*
-Data/dist/executable/*.*
-Data/dist/executable/*
-!Data/dist/executable/executable
-Data/executable.spec
+Data/dist/**/*
+!Data/dist/*/[^.]*
+Data/*.spec
+Results/**/*

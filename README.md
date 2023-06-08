@@ -18,9 +18,15 @@ In your console run :
 $ python3 minimiser.py <inputname.fasta> <executablename> <returncode>
 ```
 
+For example : 
+```sh
+$ python3 minimiser.py ../Data/example.fasta ../Data/dist/exe-one-pattern/exe-one-pattern 1
+```
+
 ## Author
 
 Adèle DESMAZIERES
+
 Contact : adesmaz.pro@gmail.com
 
 ## Licence
