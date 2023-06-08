@@ -62,9 +62,9 @@ def unequal_cut(seqs, sp_loc, exe, desired_output, imin, imax, flag_begining) :
 
 
 def strip_sequence(seqs, sp_loc, exe, desired_output, flag_begining) :
-
 	seq = seqs[sp_loc]
 	seq_ret = seq
+	loc_ret = sp_loc[1]
 	tmp_seqs = seqs.copy()
 	found = False
 	
@@ -86,13 +86,14 @@ def strip_sequence(seqs, sp_loc, exe, desired_output, flag_begining) :
 		else : 
 			seq1 = seq[:imid]
 		
-		print(seq, imin, imid, imax)
+		#print(seq, imin, imid, imax)
 		tmp_seqs[sp_loc] = seq1
 
 		if check_output(tmp_seqs, exe, desired_output) :
 			seq_ret = seq1
 			if flag_begining :
 				imin = imid
+				loc_ret = sp_loc[1] + imid
 			else :
 				imax = imid
 
@@ -102,8 +103,10 @@ def strip_sequence(seqs, sp_loc, exe, desired_output, flag_begining) :
 				imax = imid
 			else :
 				imin = imid
-		
-	return seq_ret, sp_loc[1]
+	
+	del seqs[sp_loc]
+	seqs[(sp_loc[0], loc_ret)] = seq_ret
+	return seqs, loc_ret
 
 
 
@@ -202,14 +205,17 @@ def dichotomy_cut_one_seq_iter(seqs, sp_loc, exe, desired_output) :
 			del seqs[sp1]
 
 		print("case 4")
-		seq3 = seq
-		loc3 = location
-		seqs[(specie, loc3)] = seq3
-		seq3, loc3 = strip_sequence(seqs, (specie, loc3), exe, desired_output, True)
-		seqs[(specie, loc3)] = seq3
-		seq3, loc3 = strip_sequence(seqs, (specie, loc3), exe, desired_output, False)
-		seqs[(specie, loc3)] = seq3
-		location = loc3
+		#seq3 = seq
+		#loc3 = location
+		#seqs[(specie, loc3)] = seq3
+		#seq3, loc3 = strip_sequence(seqs, (specie, loc3), exe, desired_output, True)
+		#seqs[(specie, loc3)] = seq3
+		#seq3, loc3 = strip_sequence(seqs, (specie, loc3), exe, desired_output, False)
+		#seqs[(specie, loc3)] = seq3
+		#location = loc3
+		seqs[(specie, location)] = seq
+		seqs, location = strip_sequence(seqs, (specie, location), exe, desired_output, True)
+		seqs, location = strip_sequence(seqs, (specie, location), exe, desired_output, False)
 		found = True
 	
 	return seqs
