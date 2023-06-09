@@ -2,11 +2,12 @@ import sys
 import string
 
 
-def no_three_same_letters(sequences) :
+def matching(sequences) :
+    pattern = "ACATTATTTTAATAATCCAACTAGTTGCATCATACAACTAATAAACGTGGTGAATCCAATTGTCGAGATTTATTTTTTATAAAATTATCCTAAGTAAACAGAAGG"
     for specie,seq in sequences.items() :
-        for i in range(len(seq) - 3) :
-            if seq[i:i+4] == "ATCG" :
-                raise Exception("ATCG found in file.")
+        for i in range(len(seq) - len(pattern) + 1) :
+            if seq[i:i+len(pattern)] == pattern :
+                raise Exception(pattern + " found in file.")
     return 1
 
 # returns the representation of a fasta file by a dictionnary where
@@ -34,7 +35,6 @@ def parsing(filename) :
 if __name__ == '__main__' :
     filename = sys.argv[1]
     sequences = parsing(filename)
-    print(sequences)
-    no_three_same_letters(sequences)
+    matching(sequences)
     print("Done.")
 
