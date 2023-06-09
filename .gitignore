@@ -4,3 +4,4 @@ Data/build/
 Data/dist/
 Data/*.spec
 Results/**/*
+**/*.fasta
