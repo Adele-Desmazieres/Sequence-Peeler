@@ -4,7 +4,7 @@ Status : in developpment
 
 ## Description
 
-This is a bioinformatic tool that founds the minimal input for a specified executable returning a specified output. It can find one or many fragments of sequences from a fasta file that causes an error or any other output, when used as an input in the executable. This allows the user to automatically isolate the problematic nucleotids instead of searching by hand. 
+This is a bioinformatic tool that founds the minimal input for a specified command line returning a specified output. It can find one or many fragments of sequences from a fasta file that causes an error or any other output. This allows the user to automatically isolate the problematic nucleotides instead of searching by hand. 
 
 ## Installation
 
@@ -12,15 +12,15 @@ This is a bioinformatic tool that founds the minimal input for a specified execu
 
 ## Usage
 
-In your console run : 
+In your console you should run : 
 
 ```sh
-$ python3 minimiser.py <inputname.fasta> <executablename> <returncode>
+$ python3 minimiser.py <inputname.fasta> <"command line with ../tmp/tmp.fasta instead of the inputname.fasta"> <returncode desired>
 ```
 
 For example : 
 ```sh
-$ python3 minimiser.py ../Data/example.fasta ../Data/dist/exe-one-pattern/exe-one-pattern 1
+$ python3 minimise.py ../Data/example.fasta "python3 ../Data/executable.py ../tmp/tmp.fasta" 1
 ```
 
 ## Author
