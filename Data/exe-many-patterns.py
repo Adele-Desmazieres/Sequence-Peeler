@@ -2,7 +2,7 @@ import sys
 import string
 
 
-def no_three_same_letters(sequences) :
+def matching(sequences) :
     s = set(["ATC", "ACT", "TAC", "CAT", "CTA", "TCA"])
     for specie,seq in sequences.items() :
         for i in range(len(seq) - 2) :
@@ -36,6 +36,6 @@ if __name__ == '__main__' :
     filename = sys.argv[1]
     sequences = parsing(filename)
     print(sequences)
-    no_three_same_letters(sequences)
+    matching(sequences)
     print("Done.")
 

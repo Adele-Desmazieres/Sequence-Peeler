@@ -204,8 +204,8 @@ if __name__=='__main__' :
 
 	seqs = parsing(filename)
 	cutted_seqs = dichotomy_cut(seqs, cmdline, desired_output)
-	print("\nMinimised sequences : \n" + str(cutted_seqs))
-	seqs_to_file(cutted_seqs, RESULTS_DIRECTORY+"minimized.fasta")
+	print("Minimised sequences : \n" + str(cutted_seqs))
+	seqs_to_file(cutted_seqs, RESULTS_DIRECTORY+"minimised.fasta")
 	print("Done.")
 
 	
