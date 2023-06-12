@@ -12,7 +12,7 @@ This is a bioinformatic tool that founds the minimal input for a specified comma
 
 ## Usage
 
-In your console you should run : 
+In your console in Code directory, you should run : 
 
 ```sh
 $ python3 minimiser.py <inputname.fasta> <"command line with ../tmp/tmp.fasta instead of the inputname.fasta"> <returncode desired>
