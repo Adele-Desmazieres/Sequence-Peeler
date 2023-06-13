@@ -4,35 +4,35 @@ import filecmp
 IN_EXE_OUT = [ \
     ( \
         "../Tests/t0.fasta", \
-        "\"python3 ../Tests/e0.py ../tmp/tmp.fasta\" 1", \
+        "\"python3 ../Tests/e0.py tmp.fasta\" 1", \
         "../Tests/t0_e0.fasta"), \
     ( \
         "../Tests/t0.fasta", \
-        "\"python3 ../Tests/e1.py ../tmp/tmp.fasta\" 1", \
+        "\"python3 ../Tests/e1.py tmp.fasta\" 1", \
         "../Tests/t0_e1.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 ../Tests/e1.py ../tmp/tmp.fasta\" 1", \
+        "\"python3 ../Tests/e1.py tmp.fasta\" 1", \
         "../Tests/t1_e1.fasta"), \
     ( \
         "../Tests/t2.fasta", \
-        "\"python3 ../Tests/e1.py ../tmp/tmp.fasta\" 1", \
+        "\"python3 ../Tests/e1.py tmp.fasta\" 1", \
         "../Tests/t2_e1.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 ../Tests/e2.py ../tmp/tmp.fasta\" 1", \
+        "\"python3 ../Tests/e2.py tmp.fasta\" 1", \
         "../Tests/t1_e2.fasta"), \
     ( \
         "../Tests/t0.fasta", \
-        "\"python3 ../Tests/e3.py ../tmp/tmp.fasta\" 1", \
+        "\"python3 ../Tests/e3.py tmp.fasta\" 1", \
         "../Tests/t0_e3.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 ../Tests/e3.py ../tmp/tmp.fasta\" 1", \
+        "\"python3 ../Tests/e3.py tmp.fasta\" 1", \
         "../Tests/t1_e3.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 ../Tests/e4.py ../tmp/tmp.fasta\" 1", \
+        "\"python3 ../Tests/e4.py tmp.fasta\" 1", \
         "../Tests/t1_e4.fasta") \
 ]
 

@@ -1,9 +1,10 @@
 import os
+import os.path
 import subprocess
 import shutil
 import argparse
 
-TMP_FILENAME = "../tmp/tmp.fasta"
+TMP_FILENAME = "tmp.fasta"
 RESULTS_DIRECTORY = "../Results/"
 
 
@@ -191,6 +192,18 @@ def parsing(filename) :
 		print("File not found.")
 
 
+def rm_tmpfile() :
+	os.remove(TMP_FILENAME)
+
+
+def init_tmpfile(inputfile) :
+	try :
+		with open(TMP_FILENAME, 'x') as tmp :
+			shutil.copy(inputfile, TMP_FILENAME)
+	except OSError :
+		raise OSError(TMP_FILENAME + " already in working directory, unable to create it.")
+
+
 def get_args() :
 	parser = argparse.ArgumentParser(prog="Genome Fuzzing")
 
@@ -198,7 +211,7 @@ def get_args() :
 	parser.add_argument('-w', '--workdir', default=os.getcwd())
 	parser.add_argument('-o', '--stdout', default=None)
 	parser.add_argument('-e', '--stderr', default=None)
-	#parser.add_argument('-v', '--verbose', action='store_true')
+	parser.add_argument('-v', '--verbose', action='store_true')
 
 	# positionnal arguments
 	parser.add_argument('filename')
@@ -212,18 +225,22 @@ def get_args() :
 if __name__=='__main__' :
 
 	args = get_args()
-	shutil.copy(args.filename, TMP_FILENAME)
+	init_tmpfile(args.filename)
 	desired_output = (args.returncode, args.stdout, args.stderr)
 
-	print("Desired output : " + str(desired_output))
+	if args.verbose :
+		print("Desired output : " + str(desired_output))
 
 	seqs = parsing(args.filename)
 	cutted_seqs = dichotomy_cut(seqs, args.cmdline, desired_output)
 
-	print("Minimised sequences : \n" + str(cutted_seqs))
+	if args.verbose :
+		print("Minimised sequences : \n" + str(cutted_seqs))
 
 	seqs_to_file(cutted_seqs, RESULTS_DIRECTORY+"minimised.fasta")
-	
-	print("Done.")
+	rm_tmpfile()
+
+	if args.verbose :
+		print("Done.")
 
 	
