@@ -14,7 +14,7 @@ def seqs_to_file(seqs, filename) :
 	for index,(header,seq) in enumerate(seqs.items()) :
 		if index != 0 :
 			f2.write("\n")
-		f2.write("> " + str(header[0]) + ", position " + str(header[1]) + "\n" + seq)
+		f2.write(">" + str(header[0]) + ", position " + str(header[1]) + "\n" + seq)
 	
 	f2.close()
 
@@ -173,11 +173,12 @@ def parsing(filename) :
 			sequences = dict()
 
 			for line in f :
-				line = line.strip()
+				line = line.rstrip('\n')
 				if len(line) >= 1 : 
 
 					if line[0] == '>' :
-						specie = line[1:].strip()
+						#specie = line[1:].strip()
+						specie = line[1:].rstrip('\n')
 						sequences[(specie, 1)] = ""
 
 					elif specie != None : 
