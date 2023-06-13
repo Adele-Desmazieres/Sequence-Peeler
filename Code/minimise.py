@@ -1,5 +1,4 @@
 import sys
-import string
 import subprocess
 import shutil
 
@@ -11,8 +10,12 @@ RESULTS_DIRECTORY = "../Results/"
 # writes the sequences and their species in a fasta file
 def seqs_to_file(seqs, filename) :
 	f2 = open(filename, 'w')
-	for header,seq in seqs.items() :
-		f2.write("> " + str(header[0]) + ", position " + str(header[1]) + "\n" + seq + "\n")
+
+	for index,(header,seq) in enumerate(seqs.items()) :
+		if index != 0 :
+			f2.write("\n")
+		f2.write("> " + str(header[0]) + ", position " + str(header[1]) + "\n" + seq)
+	
 	f2.close()
 
 
