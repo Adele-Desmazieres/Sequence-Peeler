@@ -1,38 +1,39 @@
 import subprocess
 import filecmp
 
+OUTPUT = "../Results/minimised.fasta"
 IN_EXE_OUT = [ \
     ( \
         "../Tests/t0.fasta", \
-        "\"python3 ../Tests/e0.py tmp.fasta\" 1", \
+        "\"python3 ../Tests/e0.py tmp.fasta\" 1 -d " + OUTPUT, \
         "../Tests/t0_e0.fasta"), \
     ( \
         "../Tests/t0.fasta", \
-        "\"python3 ../Tests/e1.py tmp.fasta\" 1", \
+        "\"python3 ../Tests/e1.py tmp.fasta\" 1 -d " + OUTPUT, \
         "../Tests/t0_e1.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 ../Tests/e1.py tmp.fasta\" 1", \
+        "\"python3 ../Tests/e1.py tmp.fasta\" 1 -d " + OUTPUT, \
         "../Tests/t1_e1.fasta"), \
     ( \
         "../Tests/t2.fasta", \
-        "\"python3 ../Tests/e1.py tmp.fasta\" 1", \
+        "\"python3 ../Tests/e1.py tmp.fasta\" 1 -d " + OUTPUT, \
         "../Tests/t2_e1.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 ../Tests/e2.py tmp.fasta\" 1", \
+        "\"python3 ../Tests/e2.py tmp.fasta\" 1 -d " + OUTPUT, \
         "../Tests/t1_e2.fasta"), \
     ( \
         "../Tests/t0.fasta", \
-        "\"python3 ../Tests/e3.py tmp.fasta\" 1", \
+        "\"python3 ../Tests/e3.py tmp.fasta\" 1 -d " + OUTPUT, \
         "../Tests/t0_e3.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 ../Tests/e3.py tmp.fasta\" 1", \
+        "\"python3 ../Tests/e3.py tmp.fasta\" 1 -d " + OUTPUT, \
         "../Tests/t1_e3.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 ../Tests/e4.py tmp.fasta\" 1", \
+        "\"python3 ../Tests/e4.py tmp.fasta\" 1 -d " + OUTPUT, \
         "../Tests/t1_e4.fasta") \
 ]
 
@@ -48,7 +49,7 @@ def test_all(cmdbeginning) :
         print(cmdline)
         subprocess.run(cmdline, shell=True)
 
-        if filecmp.cmp("../Results/minimised.fasta", output) :
+        if filecmp.cmp(OUTPUT, output) :
             print("Test réussi.\n")
             c += 1
         else : 
