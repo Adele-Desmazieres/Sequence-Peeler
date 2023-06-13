@@ -4,6 +4,10 @@ import filecmp
 IN_EXE_OUT = [ \
     ( \
         "../Tests/t0.fasta", \
+        "\"python3 ../Tests/e0.py ../tmp/tmp.fasta\" 1", \
+        "../Results/t0_e0.fasta"), \
+    ( \
+        "../Tests/t0.fasta", \
         "\"python3 ../Tests/e1.py ../tmp/tmp.fasta\" 1", \
         "../Results/t0_e1.fasta"), \
     ( \
