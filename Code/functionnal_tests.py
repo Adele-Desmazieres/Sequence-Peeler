@@ -29,7 +29,11 @@ IN_EXE_OUT = [ \
     ( \
         "../Tests/t1.fasta", \
         "\"python3 ../Tests/e3.py ../tmp/tmp.fasta\" 1", \
-        "../Results/t1_e3.fasta") \
+        "../Results/t1_e3.fasta"), \
+    ( \
+        "../Tests/t1.fasta", \
+        "\"python3 ../Tests/e4.py ../tmp/tmp.fasta\" 1", \
+        "../Results/t1_e4.fasta") \
 ]
 
 OKGREEN = '\033[92m'
