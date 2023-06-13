@@ -4,5 +4,4 @@ Data/build/
 Data/dist/
 Data/*.spec
 Results
-Tests
-**/*.fasta
+Data/*.fasta
