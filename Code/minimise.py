@@ -155,7 +155,7 @@ def dichotomy_cut(seqs, cmd, desired_output) :
 		tmp_seqs = {k:v for k,v in cutted_seqs.items() if k != sp_loc}
 		if check_output(tmp_seqs, cmd, desired_output) :
 			cutted_seqs = tmp_seqs
-			print(cutted_seqs)
+			#print(cutted_seqs)
 		
 		# otherwise reduces the sequence
 		else :
@@ -234,13 +234,14 @@ if __name__=='__main__' :
 	seqs = parsing(args.filename)
 	cutted_seqs = dichotomy_cut(seqs, args.cmdline, desired_output)
 
-	if args.verbose :
-		print("Minimised sequences : \n" + str(cutted_seqs))
-
 	seqs_to_file(cutted_seqs, RESULTS_DIRECTORY+"minimised.fasta")
 	rm_tmpfile()
 
 	if args.verbose :
+		print("Minimised sequences : \n")
+		with open(RESULTS_DIRECTORY+"minimised.fasta") as f :
+			print(f.read())
+		print()
 		print("Done.")
 
 	
