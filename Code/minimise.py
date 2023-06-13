@@ -1,6 +1,7 @@
-import sys
+import os
 import subprocess
 import shutil
+import argparse
 
 TMP_FILENAME = "../tmp/tmp.fasta"
 RESULTS_DIRECTORY = "../Results/"
@@ -191,25 +192,38 @@ def parsing(filename) :
 
 
 def get_args() :
-	filename = sys.argv[1]
-	cmdline = sys.argv[2]
-	returncode = int(sys.argv[3])
-	return (filename, cmdline, (returncode, None, None))
+	parser = argparse.ArgumentParser(prog="Genome Fuzzing")
+
+	# options that takes a value
+	parser.add_argument('-w', '--workdir', default=os.getcwd())
+	parser.add_argument('-o', '--stdout', default=None)
+	parser.add_argument('-e', '--stderr', default=None)
+	#parser.add_argument('-v', '--verbose', action='store_true')
+
+	# positionnal arguments
+	parser.add_argument('filename')
+	parser.add_argument('cmdline')
+	parser.add_argument('returncode', type=int)
+	
+	args = parser.parse_args()
+	return args
 
 
 if __name__=='__main__' :
 
-	# TODO ? lancer une fois l'executable sur tout le fichier pour check que l'output est bien possible ?
-
-	filename, cmdline, desired_output = get_args()
-	shutil.copy(filename, TMP_FILENAME)
+	args = get_args()
+	shutil.copy(args.filename, TMP_FILENAME)
+	desired_output = (args.returncode, args.stdout, args.stderr)
 
 	print("Desired output : " + str(desired_output))
 
-	seqs = parsing(filename)
-	cutted_seqs = dichotomy_cut(seqs, cmdline, desired_output)
+	seqs = parsing(args.filename)
+	cutted_seqs = dichotomy_cut(seqs, args.cmdline, desired_output)
+
 	print("Minimised sequences : \n" + str(cutted_seqs))
+
 	seqs_to_file(cutted_seqs, RESULTS_DIRECTORY+"minimised.fasta")
+	
 	print("Done.")
 
 	
