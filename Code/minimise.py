@@ -179,8 +179,7 @@ def parsing(filename) :
 				if len(line) >= 1 : 
 
 					if line[0] == '>' :
-						#specie = line[1:].strip()
-						specie = line[1:].rstrip('\n')
+						specie = line[1:]
 						sequences[(specie, 1)] = ""
 
 					elif specie != None : 
