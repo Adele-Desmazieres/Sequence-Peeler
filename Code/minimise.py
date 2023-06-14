@@ -196,9 +196,9 @@ def rm_tmpfile() :
 
 def init_tmpfile(inputfile) :
 	try :
-		with open(TMP_FILENAME, 'x') as tmp :
+		with open(TMP_FILENAME, 'x') :
 			shutil.copy(inputfile, TMP_FILENAME)
-	except OSError as e :
+	except OSError :
 		print(TMP_FILENAME + " already exists, unable to create it.")
 		truncate = input("Do you want to truncate " + TMP_FILENAME + " ? (y,n) ")
 		if truncate == 'y' : 
@@ -258,7 +258,6 @@ if __name__=='__main__' :
 		print("Minimised sequences : \n")
 		with open(outputfile) as f :
 			print(f.read())
-		print()
-		print("Done.")
+		print("\nDone.")
 
 	
