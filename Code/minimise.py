@@ -3,7 +3,6 @@ import os.path
 import subprocess
 import shutil
 import argparse
-from pathlib import Path
 
 TMP_FILENAME = "tmp.fasta"
 
