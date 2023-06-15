@@ -16,8 +16,12 @@ def iseqs_to_file(iseqs, filename) :
 	for (index, (specie, (begin, end))) in enumerate(iseqs.items()) :
 		if index != 0 :
 			f2.write("\n")
-		s = specie
-		s = specie.rstrip('#$') + " " + str(begin)
+
+		s = specie.rstrip('#$') # removes special chars
+		firstcharseq = int(s[s.rindex(',')+1:]) # selects the string after the last comma
+		firstnuclsubseq = begin - firstcharseq + 1
+		s = s.rstrip('0123456789') + "position " + str(firstnuclsubseq)
+
 		f2.write(">" + s + "\n")
 		finput.seek(begin)
 		s = finput.read(end-begin)
@@ -46,29 +50,17 @@ def check_output(iseqs, cmd, desired_output, wd) :
 # returns the new reduced sequence inside the dict sequences, and its new position
 def strip_sequence(iseqs, specie, cmd, desired_output, wd, flag_begining) :
 	(begin, end) = iseqs[specie]
-	found = False
-	
-	if flag_begining :
-		imin = begin
-		imax = (begin+end) // 2
-	else :
-		imin = (begin+end) // 2
-		imax = end
 
-	while not found :
+	imin = begin
+	imax = end
+	imid = (imin+imax) // 2
 
-		imid = (imin + imax) // 2
-
-		# stopping condition
-		if imid == imin or imid == imax :
-			loc = (imin, end) if flag_begining else (begin, imax)
-			iseqs[specie] = loc
-			found = True
-			continue
+	while imid != imin and imid != imax :
 
 		# get the most central quarter
 		loc = (imid, end) if flag_begining else (begin, imid)
 		iseqs[specie] = loc
+
 		# if the cut maintain the output, we keep cutting toward the center of the sequence
 		if check_output(iseqs, cmd, desired_output, wd) :
 			if flag_begining :
@@ -78,11 +70,17 @@ def strip_sequence(iseqs, specie, cmd, desired_output, wd, flag_begining) :
 
 		# else the cut doesn't maintain the output, so we keep cutting toward the exterior
 		else :
+			# keep the most external quarter
+			loc = (imin, end) if flag_begining else (begin, imax)
+			iseqs[specie] = loc
 			if flag_begining :
 				imax = imid
 			else :
 				imin = imid
 	
+		imid = (imin+imax) // 2
+
+
 	return iseqs
 
 
@@ -154,11 +152,11 @@ def dichotomy_cut(iseqs, cmd, desired_output, wd) :
 
 
 # returns the representation of a fasta file parsed in a dictionnary where
-# the key is the specie header
+# the key is the specie header + ", " + the index of the first char of its sequence
 # and the value is the tuple (begin, end) 
 # they are the index of the characteres of the sequence in the file
 # "begin" is included and "end" is excluded
-# for example : {"Fraise":(8, 25), "Pomme":(33, 50)}
+# for example : {"Fraise, 8":(8, 25), "Pomme, 33":(33, 50)}
 def parsing(filename) :
 	try :
 		with open(filename, 'r') as f :
@@ -173,7 +171,7 @@ def parsing(filename) :
 					if specie != None :
 						sequences[specie] = (sequences[specie][0], c-len(line)-1)
 
-					specie = line[1:].rstrip('\n') + ", position 1"
+					specie = line[1:].rstrip('\n') + ", " + str(c)
 					sequences[specie] = (c, c+1)
 
 		sequences[specie] = (sequences[specie][0], c)
