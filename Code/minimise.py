@@ -33,8 +33,6 @@ def check_output(iseqs, cmd, desired_output, wd) :
 	iseqs_to_file(iseqs, TMPFILE)
 	output = subprocess.run(cmd, shell=True, capture_output=True, cwd=wd)
 
-	#print("Exe output : " + str((output.returncode, output.stdout, output.stderr)))
-	
 	checkreturn = desired_output[0] == None or desired_output[0] == output.returncode
 	checkstdout = desired_output[1] == None or desired_output[1] == output.stdout
 	checkstderr = desired_output[2] == None or desired_output[2] == output.stderr
@@ -98,11 +96,7 @@ def dichotomy_cut_one_seq_iter(iseqs, specie, cmd, desired_output, wd) :
 		(begin, end) = iseqs[specie]
 		middle = (begin + end) // 2
 
-		#seq = seqs[(specie, location)]
-
 		# case where the target fragment is in the first half
-		#seq0 = seq[:len(seq)//2]
-		#seqs[(specie, location)] = seq0
 		iseqs[specie] = (begin, middle)
 		if middle != end and check_output(iseqs, cmd, desired_output, wd) :
 			continue
@@ -110,9 +104,6 @@ def dichotomy_cut_one_seq_iter(iseqs, specie, cmd, desired_output, wd) :
 			del iseqs[specie]
 
 		# case where the target fragment is in the second half
-		#seq1 = seq[len(seq)//2:]
-		#location_tmp += len(seq)//2
-		#seqs[(specie, location_tmp)] = seq1
 		iseqs[specie] = (middle, end)
 		if middle != end and check_output(iseqs, cmd, desired_output, wd) :
 			continue
@@ -150,7 +141,7 @@ def dichotomy_cut(iseqs, cmd, desired_output, wd) :
 	for sp in iseqs.keys() :
 
 		# check if desired output is obtained whithout the sequence of the specie
-		tmp_iseqs = {k:v for k,v in cutted_iseqs.items() if k != sp}
+		tmp_iseqs = {k:v for k,v in cutted_iseqs.items() if k != sp} # TODO : éviter la copie
 		if check_output(tmp_iseqs, cmd, desired_output, wd) :
 			cutted_iseqs = tmp_iseqs
 		
@@ -182,8 +173,7 @@ def parsing(filename) :
 					if specie != None :
 						sequences[specie] = (sequences[specie][0], c-len(line)-1)
 
-					#specie = line[1:].rstrip('\n') + ", position 1"
-					specie = line[1:].rstrip('\n')
+					specie = line[1:].rstrip('\n') + ", position 1"
 					sequences[specie] = (c, c+1)
 
 		sequences[specie] = (sequences[specie][0], c)
@@ -193,24 +183,36 @@ def parsing(filename) :
 		print("File not found.")
 
 
+# remove the file TMPFILE
 def rm_tmpfile() :
 	os.remove(TMPFILE)
 
 
+# create the file TMP which is a copy of the inputfile
+# ask the user to truncate it if this file already exists
+# raise an error if a directory with this name already exists
 def init_tmpfile(inputfile) :
 	try :
 		with open(TMPFILE, 'x') :
 			shutil.copy(inputfile, TMPFILE)
-	except OSError :
-		print(TMPFILE + " already exists, unable to create it.")
-		truncate = input("Do you want to truncate " + TMPFILE + " ? (y,n) ")
-		if truncate == 'y' : 
-			with open(TMPFILE, 'w') as tmp :
-				shutil.copy(inputfile, TMPFILE)
+
+	except OSError as e :
+
+		if os.path.isfile(TMPFILE) :
+			print(TMPFILE + " already exists, unable to create it.")
+			truncate = input("Do you want to truncate " + TMPFILE + " ? (y,n) ")
+			if truncate == 'y' : 
+				with open(TMPFILE, 'w') as tmp :
+					shutil.copy(inputfile, TMPFILE)
+			else :
+				exit(0)
+		
 		else :
-			exit(0)
+			print("Unable to create the file" + TMPFILE + " : a directory with this name already exists.")
+			raise(e)
 
 
+# set the destination file to workdir/minimised.fasta if None
 def get_outputfile(destfile, workdir) :
 	if destfile == None :
 		destfile = workdir + "/minimised.fasta"
