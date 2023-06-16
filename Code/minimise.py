@@ -8,6 +8,19 @@ TMPFILE = "tmp.fasta"
 INPUTFILE = ""
 CMD = ""
 
+class SpecieData :
+	
+	def __init__(self, header, begin_seq, end_seq) :
+		self.header = header # string of the specie name and comments
+		self.begin_seq = begin_seq # int constant
+		self.subseqs = set((begin_seq, end_seq)) # int tuple set, variable
+	
+	def __str__(self) :
+		s = ">" + self.header + "\n"
+		s += str(self.subseqs)
+		return s
+
+
 # writes the sequences and their species in a fasta file
 def iseqs_to_file(iseqs, filename) :
 	finput = open(INPUTFILE, 'r')
@@ -133,19 +146,50 @@ def dichotomy_cut_one_seq_iter(iseqs, specie, cmd, desired_output, wd) :
 	return iseqs
 
 
+def reduce_specie(iseqs, sp, cmd, desired_output, wd) :
+	
+	tmpsubseqs = sp.subseqs.copy()
+	
+	while tmpsubseqs : # while set not empty
+		
+		seq = tmpsubseqs.pop() # take an arbitrairy element
+		sp.subseqs.remove(seq)
+		
+		# supp puis add les deux séparées
+		# et check output
+		# si oui, les ajouter au set tmp pour striper les deux plus tard
+		m = (seq[0] + seq[1]) // 2
+		seq1 = (seq[0], m)
+		seq2 = (m, seq[1])
+		sp.subseqs.add(seq1)
+		sp.subseqs.add(seq2)
+		if check_output(iseqs, cmd, desired_output, wd) :
+			tmpsubseqs.add(seq1)
+			tmpsubseqs.add(seq2)
+			
+		else :
+			seq = reduce_sequence(seq, ...)
+			sp.subseqs.add(seq)
+	
+	return iseqs
+			
+			
+		
+	
+
+
 # returns every reduced sequences
-def dichotomy_cut(iseqs, cmd, desired_output, wd) :
+def reduce_data(iseqs, cmd, desired_output, wd) :
 	cutted_iseqs = iseqs.copy()
-	for sp in iseqs.keys() :
+	for sp in iseqs :
 
 		# check if desired output is obtained whithout the sequence of the specie
-		tmp_iseqs = {k:v for k,v in cutted_iseqs.items() if k != sp} # TODO : éviter la copie
-		if check_output(tmp_iseqs, cmd, desired_output, wd) :
-			cutted_iseqs = tmp_iseqs
+		cutted_iseqs.remove(sp)
 		
-		# otherwise reduces the sequence
-		else :
-			cutted_iseqs = dichotomy_cut_one_seq_iter(cutted_iseqs, sp, cmd, desired_output, wd)
+		if not check_output(cutted_iseqs, cmd, desired_output, wd) :
+			# otherwise reduces the sequence
+			cutted_iseqs.add(sp)
+			cutted_iseqs = reduce_specie(cutted_iseqs, sp, cmd, desired_output, wd)
 
 	print(cutted_iseqs)
 	return cutted_iseqs
@@ -160,21 +204,32 @@ def dichotomy_cut(iseqs, cmd, desired_output, wd) :
 def parsing(filename) :
 	try :
 		with open(filename, 'r') as f :
+			header = None
 			specie = None
-			sequences = dict()
+			begin = 0
+			end = 0
+			sequences = set()
 			c = 0
 
 			for line in f :
+				
 				c += len(line)
+								
 				if line[0] == '>' :
-
-					if specie != None :
-						sequences[specie] = (sequences[specie][0], c-len(line)-1)
-
-					specie = line[1:].rstrip('\n') + ", " + str(c)
-					sequences[specie] = (c, c+1)
-
-		sequences[specie] = (sequences[specie][0], c)
+					
+					if header != None :
+						end = c - len(line) - 1
+						specie = SpecieData(header, begin, end)
+						sequences.add(specie)
+					
+					header = line[1:].rstrip('\n')
+					begin = c
+					end = c+1
+				
+		end = c - len(line) - 1
+		specie = SpecieData(header, begin, end)
+		sequences.add(specie)
+		
 		return sequences
 
 	except IOError :
@@ -254,7 +309,7 @@ if __name__=='__main__' :
 
 	INPUTFILE = args.filename
 	iseqs = parsing(INPUTFILE)
-	cutted_iseqs = dichotomy_cut(iseqs, args.cmdline, desired_output, wd)
+	cutted_iseqs = reduce_data(iseqs, args.cmdline, desired_output, wd)
 
 	iseqs_to_file(cutted_iseqs, outputfile)
 	rm_tmpfile()
