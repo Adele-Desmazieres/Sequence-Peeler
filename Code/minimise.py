@@ -13,7 +13,8 @@ class SpecieData :
 	def __init__(self, header, begin_seq, end_seq) :
 		self.header = header # string of the specie name and comments
 		self.begin_seq = begin_seq # int constant
-		self.subseqs = set((begin_seq, end_seq)) # int tuple set, variable
+		self.subseqs = set() # int tuple set, variable
+		self.subseqs.add((begin_seq, end_seq))
 	
 	def __str__(self) :
 		s = ">" + self.header + "\n"
@@ -21,24 +22,34 @@ class SpecieData :
 		return s
 
 
+def printset(iseqs) :
+	return 0
+	print()
+	for sp in list(iseqs) :
+		print(sp)
+
+
 # writes the sequences and their species in a fasta file
 def iseqs_to_file(iseqs, filename) :
 	finput = open(INPUTFILE, 'r')
 	f2 = open(filename, 'w')
+	
+	for (i, sp) in enumerate(iseqs) :
+			
+		for (j, subseq) in enumerate(sorted(list(sp.subseqs), key=lambda x:x[0])) :
+			if i != 0 or j != 0 :
+				f2.write("\n")
+			
+			(begin, end) = subseq
 
-	for (index, (specie, (begin, end))) in enumerate(iseqs.items()) :
-		if index != 0 :
-			f2.write("\n")
-
-		s = specie.rstrip('#$') # removes special chars
-		firstcharseq = int(s[s.rindex(',')+1:]) # selects the string after the last comma
-		firstnuclsubseq = begin - firstcharseq + 1
-		s = s.rstrip('0123456789') + "position " + str(firstnuclsubseq)
-
-		f2.write(">" + s + "\n")
-		finput.seek(begin)
-		s = finput.read(end-begin)
-		f2.write(s)
+			firstcharseq = sp.begin_seq
+			firstnuclsubseq = begin - firstcharseq + 1
+			header = sp.header + ", position " + str(firstnuclsubseq)
+			
+			f2.write(">" + header + "\n")
+			finput.seek(begin)
+			actual_seq = finput.read(end-begin)
+			f2.write(actual_seq)
 	
 	finput.close()
 	f2.close()
@@ -61,21 +72,28 @@ def check_output(iseqs, cmd, desired_output, wd) :
 # reduces the sequence by cutting begining or ending nucleotides
 # cutting in half successively, with an iterative dichotomy
 # returns the new reduced sequence inside the dict sequences, and its new position
-def strip_sequence(iseqs, specie, cmd, desired_output, wd, flag_begining) :
-	(begin, end) = iseqs[specie]
+def strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, flag_begining) :
+	print(flag_begining)
+	
+	(begin, end) = seq
+	seq1 = seq
+	sp.subseqs.remove(seq)
 
 	imin = begin
 	imax = end
 	imid = (imin+imax) // 2
-
+		
 	while imid != imin and imid != imax :
-
+		print("\t", imin, imid, imax)
+		printset(iseqs)
+		
 		# get the most central quarter
-		loc = (imid, end) if flag_begining else (begin, imid)
-		iseqs[specie] = loc
-
+		seq1 = (imid, end) if flag_begining else (begin, imid)
+		sp.subseqs.add(seq1)
+		r = check_output(iseqs, cmd, desired_output, wd)
+		sp.subseqs.remove(seq1)
 		# if the cut maintain the output, we keep cutting toward the center of the sequence
-		if check_output(iseqs, cmd, desired_output, wd) :
+		if r :
 			if flag_begining :
 				imin = imid
 			else :
@@ -84,114 +102,97 @@ def strip_sequence(iseqs, specie, cmd, desired_output, wd, flag_begining) :
 		# else the cut doesn't maintain the output, so we keep cutting toward the exterior
 		else :
 			# keep the most external quarter
-			loc = (imin, end) if flag_begining else (begin, imax)
-			iseqs[specie] = loc
+			seq1 = (imin, end) if flag_begining else (begin, imax)
+			#sp.subseqs.add(seq1)
 			if flag_begining :
 				imax = imid
 			else :
 				imin = imid
 	
 		imid = (imin+imax) // 2
-
-
-	return iseqs
-
-
-# returns the new sequences dict with the reduced sequenced of the specified specie
-# use an iterative dichotomy
-def dichotomy_cut_one_seq_iter(iseqs, specie, cmd, desired_output, wd) : 
-
-	found = False
-
-	while not found :
-		(begin, end) = iseqs[specie]
-		middle = (begin + end) // 2
-
-		# case where the target fragment is in the first half
-		iseqs[specie] = (begin, middle)
-		if middle != end and check_output(iseqs, cmd, desired_output, wd) :
-			continue
-		else :
-			del iseqs[specie]
-
-		# case where the target fragment is in the second half
-		iseqs[specie] = (middle, end)
-		if middle != end and check_output(iseqs, cmd, desired_output, wd) :
-			continue
-		else :
-			del iseqs[specie]
-
-		# case where there are two co-factor sequences
-		# so we separate them under two different header
-		sp0 = specie + "#"
-		sp1 = specie + "$"
-		iseqs[sp0] = (begin, middle)
-		iseqs[sp1] = (middle, end)
-		# TODO : relancer le check_output pour chopper les co-factors qui ne sont pas de part et d'autre du milieu de la séquence
-		if check_output(iseqs, cmd, desired_output, wd) :
-			iseqs = dichotomy_cut_one_seq_iter(iseqs, sp0, cmd, desired_output, wd)
-			iseqs = dichotomy_cut_one_seq_iter(iseqs, sp1, cmd, desired_output, wd)
-			break
-		else : 
-			del iseqs[sp0]
-			del iseqs[sp1]
-
-		# case where the target sequence is on both sides of the cut
-		# so we strip first and last unnecessary nucleotids
-		iseqs[specie] = (begin, end)
-		iseqs = strip_sequence(iseqs, specie, cmd, desired_output, wd, True)
-		iseqs = strip_sequence(iseqs, specie, cmd, desired_output, wd, False)
-		found = True
 	
-	return iseqs
+	sp.subseqs.add(seq1)
+	return seq1
 
+		
+	
 
-def reduce_specie(iseqs, sp, cmd, desired_output, wd) :
+# reduces the sequences of the specie and return nothing
+# use an iterative binary search
+def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 	
 	tmpsubseqs = sp.subseqs.copy()
 	
 	while tmpsubseqs : # while set not empty
+		printset(iseqs)
 		
 		seq = tmpsubseqs.pop() # take an arbitrairy element
+		print("reducing : " + str(seq))
 		sp.subseqs.remove(seq)
+		(begin, end) = seq
+		middle = (seq[0] + seq[1]) // 2		
+		seq1 = (begin, middle)
+		seq2 = (middle, end)
 		
-		# supp puis add les deux séparées
-		# et check output
-		# si oui, les ajouter au set tmp pour striper les deux plus tard
-		m = (seq[0] + seq[1]) // 2
-		seq1 = (seq[0], m)
-		seq2 = (m, seq[1])
+		# case where the target fragment is in the first half
+		sp.subseqs.add(seq1)
+		if middle != end and check_output(iseqs, cmd, desired_output, wd) :
+			print("case 1")
+			tmpsubseqs.add(seq1)
+			continue
+		else :
+			sp.subseqs.remove(seq1)		
+		
+		# case where the target fragment is in the second half
+		sp.subseqs.add(seq2)
+		if middle != begin and check_output(iseqs, cmd, desired_output, wd) :
+			print("case 2")
+			tmpsubseqs.add(seq2)
+			continue
+		else :
+			sp.subseqs.remove(seq2)		
+		
+		# case where there are two co-factor sequences
+		# so we cut the seq in half and add them to the seq to be reduced
+		# TODO : relancer le check_output pour trouver les co-factors qui ne sont pas de part et d'autre du milieu de la séquence
 		sp.subseqs.add(seq1)
 		sp.subseqs.add(seq2)
-		if check_output(iseqs, cmd, desired_output, wd) :
+		if middle != end and middle != begin and check_output(iseqs, cmd, desired_output, wd) :
+			print("case 3")
 			tmpsubseqs.add(seq1)
 			tmpsubseqs.add(seq2)
-			
+			continue
 		else :
-			seq = reduce_sequence(seq, ...)
-			sp.subseqs.add(seq)
-	
-	return iseqs
-			
-			
+			sp.subseqs.remove(seq1)
+			sp.subseqs.remove(seq2)
 		
+		print("case 4")
+		
+		sp.subseqs.add(seq)
+		# case where the target sequence is on both sides of the cut
+		# so we strip first and last unnecessary nucleotids
+		seq = strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, True)
+		seq = strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, False)
 	
+	return iseqs	
 
 
 # returns every reduced sequences
 def reduce_data(iseqs, cmd, desired_output, wd) :
 	cutted_iseqs = iseqs.copy()
 	for sp in iseqs :
-
+		printset(cutted_iseqs)
+		print("Sans " + sp.header)
 		# check if desired output is obtained whithout the sequence of the specie
 		cutted_iseqs.remove(sp)
 		
 		if not check_output(cutted_iseqs, cmd, desired_output, wd) :
+			print("Non")
 			# otherwise reduces the sequence
 			cutted_iseqs.add(sp)
-			cutted_iseqs = reduce_specie(cutted_iseqs, sp, cmd, desired_output, wd)
+			cutted_iseqs = reduce_specie(sp, cutted_iseqs, cmd, desired_output, wd)
 
-	print(cutted_iseqs)
+	printset(cutted_iseqs)
 	return cutted_iseqs
 
 
@@ -226,10 +227,10 @@ def parsing(filename) :
 					begin = c
 					end = c+1
 				
-		end = c - len(line) - 1
+		end = c
 		specie = SpecieData(header, begin, end)
 		sequences.add(specie)
-		
+		printset(sequences)
 		return sequences
 
 	except IOError :
@@ -309,6 +310,8 @@ if __name__=='__main__' :
 
 	INPUTFILE = args.filename
 	iseqs = parsing(INPUTFILE)
+	print("First")
+	printset(iseqs)
 	cutted_iseqs = reduce_data(iseqs, args.cmdline, desired_output, wd)
 
 	iseqs_to_file(cutted_iseqs, outputfile)
