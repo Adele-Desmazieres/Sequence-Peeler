@@ -10,20 +10,19 @@ CMD = ""
 
 class SpecieData :
 	
-	def __init__(self, header, begin_seq, end_seq) :
+	def __init__(self, header, begin_seq, end_seq) : # initialise the specie with one seq
 		self.header = header # string of the specie name and comments
-		self.begin_seq = begin_seq # int constant
-		self.subseqs = set() # int tuple set, variable
-		self.subseqs.add((begin_seq, end_seq))
+		self.begin_seq = begin_seq # int, constant
+		self.subseqs = set() # int tuple set, variable represents the index of the first char of the seq in the file (included) and the index of the last one (excluded)
+		self.subseqs.add((begin_seq, end_seq)) # adds the index of the entire seq to the set
 	
-	def __str__(self) :
+	def __str__(self) : # debug function
 		s = ">" + self.header + "\n"
 		s += str(self.subseqs)
 		return s
 
 
 def printset(iseqs) :
-	return 0
 	print()
 	for sp in list(iseqs) :
 		print(sp)
@@ -33,8 +32,9 @@ def printset(iseqs) :
 def iseqs_to_file(iseqs, filename) :
 	finput = open(INPUTFILE, 'r')
 	f2 = open(filename, 'w')
-	
-	for (i, sp) in enumerate(iseqs) :
+
+	ordered_iseqs = sorted(list(iseqs), key=lambda x:x.header) # alphabetical ordering of header's sequences
+	for (i, sp) in enumerate(ordered_iseqs) :
 			
 		for (j, subseq) in enumerate(sorted(list(sp.subseqs), key=lambda x:x[0])) :
 			if i != 0 or j != 0 :
@@ -69,11 +69,10 @@ def check_output(iseqs, cmd, desired_output, wd) :
 	return r
 
 
-# reduces the sequence by cutting begining or ending nucleotides
-# cutting in half successively, with an iterative dichotomy
-# returns the new reduced sequence inside the dict sequences, and its new position
+# reduces the sequence, cutting first and last nucleotides
+# cutting in half successively with an iterative binary search
+# returns the new reduced sequence, and adds it to the species's list of seqs
 def strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, flag_begining) :
-	print(flag_begining)
 	
 	(begin, end) = seq
 	seq1 = seq
@@ -84,14 +83,13 @@ def strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, flag_begining) :
 	imid = (imin+imax) // 2
 		
 	while imid != imin and imid != imax :
-		print("\t", imin, imid, imax)
-		printset(iseqs)
-		
+
 		# get the most central quarter
 		seq1 = (imid, end) if flag_begining else (begin, imid)
 		sp.subseqs.add(seq1)
 		r = check_output(iseqs, cmd, desired_output, wd)
 		sp.subseqs.remove(seq1)
+
 		# if the cut maintain the output, we keep cutting toward the center of the sequence
 		if r :
 			if flag_begining :
@@ -103,7 +101,6 @@ def strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, flag_begining) :
 		else :
 			# keep the most external quarter
 			seq1 = (imin, end) if flag_begining else (begin, imax)
-			#sp.subseqs.add(seq1)
 			if flag_begining :
 				imax = imid
 			else :
@@ -117,17 +114,15 @@ def strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, flag_begining) :
 		
 	
 
-# reduces the sequences of the specie and return nothing
+# reduces the sequences of the specie and return the new set of SpecieData instances
 # use an iterative binary search
 def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 	
 	tmpsubseqs = sp.subseqs.copy()
 	
 	while tmpsubseqs : # while set not empty
-		printset(iseqs)
 		
 		seq = tmpsubseqs.pop() # take an arbitrairy element
-		print("reducing : " + str(seq))
 		sp.subseqs.remove(seq)
 		(begin, end) = seq
 		middle = (seq[0] + seq[1]) // 2		
@@ -137,7 +132,6 @@ def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 		# case where the target fragment is in the first half
 		sp.subseqs.add(seq1)
 		if middle != end and check_output(iseqs, cmd, desired_output, wd) :
-			print("case 1")
 			tmpsubseqs.add(seq1)
 			continue
 		else :
@@ -146,7 +140,6 @@ def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 		# case where the target fragment is in the second half
 		sp.subseqs.add(seq2)
 		if middle != begin and check_output(iseqs, cmd, desired_output, wd) :
-			print("case 2")
 			tmpsubseqs.add(seq2)
 			continue
 		else :
@@ -158,7 +151,6 @@ def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 		sp.subseqs.add(seq1)
 		sp.subseqs.add(seq2)
 		if middle != end and middle != begin and check_output(iseqs, cmd, desired_output, wd) :
-			print("case 3")
 			tmpsubseqs.add(seq1)
 			tmpsubseqs.add(seq2)
 			continue
@@ -166,42 +158,34 @@ def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 			sp.subseqs.remove(seq1)
 			sp.subseqs.remove(seq2)
 		
-		print("case 4")
-		
-		sp.subseqs.add(seq)
 		# case where the target sequence is on both sides of the cut
 		# so we strip first and last unnecessary nucleotids
+		sp.subseqs.add(seq)
 		seq = strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, True)
 		seq = strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, False)
 	
 	return iseqs	
 
 
-# returns every reduced sequences
+# returns every reduced sequences in a set of SpecieData
 def reduce_data(iseqs, cmd, desired_output, wd) :
 	cutted_iseqs = iseqs.copy()
+
 	for sp in iseqs :
-		printset(cutted_iseqs)
-		print("Sans " + sp.header)
 		# check if desired output is obtained whithout the sequence of the specie
 		cutted_iseqs.remove(sp)
 		
 		if not check_output(cutted_iseqs, cmd, desired_output, wd) :
-			print("Non")
 			# otherwise reduces the sequence
 			cutted_iseqs.add(sp)
 			cutted_iseqs = reduce_specie(sp, cutted_iseqs, cmd, desired_output, wd)
 
-	printset(cutted_iseqs)
 	return cutted_iseqs
 
 
-# returns the representation of a fasta file parsed in a dictionnary where
-# the key is the specie header + ", " + the index of the first char of its sequence
-# and the value is the tuple (begin, end) 
-# they are the index of the characteres of the sequence in the file
-# "begin" is included and "end" is excluded
-# for example : {"Fraise, 8":(8, 25), "Pomme, 33":(33, 50)}
+# returns the representation of a fasta file parsed in a set of SpecieData
+# they contain the index of the first and last characteres of the sequence in the file
+# the first is included and the last is excluded
 def parsing(filename) :
 	try :
 		with open(filename, 'r') as f :
@@ -215,7 +199,6 @@ def parsing(filename) :
 			for line in f :
 				
 				c += len(line)
-								
 				if line[0] == '>' :
 					
 					if header != None :
@@ -227,22 +210,23 @@ def parsing(filename) :
 					begin = c
 					end = c+1
 				
+		# adds the last seq to the set
 		end = c
 		specie = SpecieData(header, begin, end)
 		sequences.add(specie)
-		printset(sequences)
+		
 		return sequences
 
 	except IOError :
 		print("File not found.")
 
 
-# remove the file TMPFILE
+# removes the file TMPFILE
 def rm_tmpfile() :
 	os.remove(TMPFILE)
 
 
-# create the file TMP which is a copy of the inputfile
+# creates the file TMP which is a copy of the inputfile
 # ask the user to truncate it if this file already exists
 # raise an error if a directory with this name already exists
 def init_tmpfile(inputfile) :
@@ -266,7 +250,7 @@ def init_tmpfile(inputfile) :
 			raise(e)
 
 
-# set the destination file to workdir/minimised.fasta if None
+# set the destination file to "workdir/minimised.fasta" if None specified
 def get_outputfile(destfile, workdir) :
 	if destfile == None :
 		destfile = workdir + "/minimised.fasta"
@@ -294,31 +278,31 @@ def get_args() :
 
 if __name__=='__main__' :
 
+	# initialise the directories
 	args = get_args()
 	desired_output = (args.returncode, args.stdout, args.stderr)
 	wd = args.workdir if args.workdir[len(args.workdir)-1] != '/' else args.workdir[:-1]
 	outputfile = get_outputfile(args.destfile, wd)
+	INPUTFILE = args.filename
 	TMPFILE = wd + "/" + TMPFILE
-
 	init_tmpfile(args.filename)
 
 	if args.verbose :
-		print("Desired output : " + str(desired_output))
-		print("Working directory : " + wd)
-		print("Tmp filename : " + TMPFILE)
-		print("Output filename : " + outputfile + "\n")
+		print(" - Desired output : " + str(desired_output))
+		print(" - Working directory : " + wd)
+		print(" - Tmp filename : " + TMPFILE)
+		print(" - Output filename : " + outputfile + "\n")
 
-	INPUTFILE = args.filename
 	iseqs = parsing(INPUTFILE)
-	print("First")
-	printset(iseqs)
+
+	# process the data
 	cutted_iseqs = reduce_data(iseqs, args.cmdline, desired_output, wd)
 
 	iseqs_to_file(cutted_iseqs, outputfile)
 	rm_tmpfile()
 
 	if args.verbose :
-		print("\nMinimised sequences:")
+		print("\n - Minimised sequences:")
 		with open(outputfile) as f :
 			print(f.read())
 		print("\nDone.")
