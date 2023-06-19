@@ -10,11 +10,12 @@ CMD = ""
 
 class SpecieData :
 	
-	def __init__(self, header, begin_seq, end_seq) : # initialise the specie with one seq
+	def __init__(self, header, begin_seq, end_seq, file) : # initialise the specie with one seq
 		self.header = header # string of the specie name and comments
 		self.begin_seq = begin_seq # int, constant
 		self.subseqs = set() # int tuple set, variable represents the index of the first char of the seq in the file (included) and the index of the last one (excluded)
 		self.subseqs.add((begin_seq, end_seq)) # adds the index of the entire seq to the set
+		self.file = file # string filename
 	
 	def __str__(self) : # debug function
 		s = ">" + self.header + "\n"
@@ -65,10 +66,6 @@ def check_output(iseqs, cmd, desired_output, wd) :
 	checkstdout = desired_output[1] == None or desired_output[1] in output.stdout.decode()
 	checkstderr = desired_output[2] == None or desired_output[2] in output.stderr.decode()
 	r = (checkreturn and checkstdout and checkstderr)
-
-	#print("\nActual output : \n\t" + str(output.returncode) + "\n\t" + str(output.stdout.decode()) + "\n\t" + str(output.stderr.decode()))
-	#print("\nDesired output : \n\t" + str(desired_output[0]) + "\n\t" + str(desired_output[1]) + "\n\t" + str(desired_output[2]))
-
 
 	return r
 
@@ -126,7 +123,7 @@ def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 	
 	while tmpsubseqs : # while set not empty
 		
-		seq = tmpsubseqs.pop() # take an arbitrairy element
+		seq = tmpsubseqs.pop() # take an arbitrary element
 		sp.subseqs.remove(seq)
 		(begin, end) = seq
 		middle = (seq[0] + seq[1]) // 2		
@@ -221,8 +218,29 @@ def parsing(filename) :
 		
 		return sequences
 
+	except IOError as e :
+		print("File " + filename + " not found.")
+		raise
+		
+
+
+# takes a file that contains the files name
+def parsing_multiple_files(fofname) :
+	try :
+		with open(fofname) as fof :
+			seqsbyfile = set()
+
+			for line in fof :
+
+				filename = line.rstrip('\n')
+				seqs = parsing(filename)
+				seqsbyfile.add(seqs)
+
+		return seqsbyfile
+
 	except IOError :
-		print("File not found.")
+		print("File " + fofname + " not found.")
+		raise
 
 
 # removes the file TMPFILE
@@ -231,7 +249,7 @@ def rm_tmpfile() :
 
 
 # creates the file TMP which is a copy of the inputfile
-# ask the user to truncate it if this file already exists
+# ask the user to truncate it if the file already exists
 # raise an error if a directory with this name already exists
 def init_tmpfile(inputfile) :
 	try :
@@ -279,6 +297,7 @@ def get_args() :
 	args = parser.parse_args()
 	if not (args.returncode or args.stdout or args.stderr) :
 		parser.error("No output requested, add -r or -e or -o.")
+	
 	return args
 
 
