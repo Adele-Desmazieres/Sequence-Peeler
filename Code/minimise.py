@@ -33,7 +33,7 @@ def iseqs_to_file(iseqs, filename) :
 	finput = open(INPUTFILE, 'r')
 	f2 = open(filename, 'w')
 
-	ordered_iseqs = sorted(list(iseqs), key=lambda x:x.header) # alphabetical ordering of header's sequences
+	ordered_iseqs = sorted(list(iseqs), key=lambda x:x.begin_seq) # alphabetical ordering of header's sequences
 	for (i, sp) in enumerate(ordered_iseqs) :
 			
 		for (j, subseq) in enumerate(sorted(list(sp.subseqs), key=lambda x:x[0])) :
@@ -62,9 +62,13 @@ def check_output(iseqs, cmd, desired_output, wd) :
 	output = subprocess.run(cmd, shell=True, capture_output=True, cwd=wd)
 
 	checkreturn = desired_output[0] == None or desired_output[0] == output.returncode
-	checkstdout = desired_output[1] == None or desired_output[1] == output.stdout
-	checkstderr = desired_output[2] == None or desired_output[2] == output.stderr
+	checkstdout = desired_output[1] == None or desired_output[1] in output.stdout.decode()
+	checkstderr = desired_output[2] == None or desired_output[2] in output.stderr.decode()
 	r = (checkreturn and checkstdout and checkstderr)
+
+	#print("\nActual output : \n\t" + str(output.returncode) + "\n\t" + str(output.stdout.decode()) + "\n\t" + str(output.stderr.decode()))
+	#print("\nDesired output : \n\t" + str(desired_output[0]) + "\n\t" + str(desired_output[1]) + "\n\t" + str(desired_output[2]))
+
 
 	return r
 
@@ -264,23 +268,27 @@ def get_args() :
 	parser.add_argument('-d', '--destfile', default=None)
 	parser.add_argument('-e', '--stderr', default=None)
 	parser.add_argument('-o', '--stdout', default=None)
+	parser.add_argument('-r', '--returncode', default=None, type=int)
 	parser.add_argument('-v', '--verbose', action='store_true')
 	parser.add_argument('-w', '--workdir', default=os.getcwd())
 
 	# positionnal arguments
 	parser.add_argument('filename')
 	parser.add_argument('cmdline')
-	parser.add_argument('returncode', type=int)
 	
 	args = parser.parse_args()
+	if not (args.returncode or args.stdout or args.stderr) :
+		parser.error("No output requested, add -r or -e or -o.")
 	return args
 
 
 if __name__=='__main__' :
 
-	# initialise the directories
+	# get the arguments
 	args = get_args()
 	desired_output = (args.returncode, args.stdout, args.stderr)
+
+	# initialise the directories
 	wd = args.workdir if args.workdir[len(args.workdir)-1] != '/' else args.workdir[:-1]
 	outputfile = get_outputfile(args.destfile, wd)
 	INPUTFILE = args.filename
@@ -288,6 +296,7 @@ if __name__=='__main__' :
 	init_tmpfile(args.filename)
 
 	if args.verbose :
+		print()
 		print(" - Desired output : " + str(desired_output))
 		print(" - Working directory : " + wd)
 		print(" - Tmp filename : " + TMPFILE)
