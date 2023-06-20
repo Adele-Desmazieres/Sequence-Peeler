@@ -7,6 +7,8 @@ import argparse
 TMPFILE = "tmp.fasta"
 INPUTFILE = ""
 CMD = ""
+WORKDIR = ""
+DESIRED_OUTPUT = None
 
 class SpecieData :
 	
@@ -58,13 +60,13 @@ def iseqs_to_file(iseqs, filename) :
 
 # check that the execution of cmd with the sequences as input gives the desired output
 # TODO : execute on the cluster
-def check_output(iseqs, cmd, desired_output, wd) :
+def check_output(iseqs) :
 	iseqs_to_file(iseqs, TMPFILE)
-	output = subprocess.run(cmd, shell=True, capture_output=True, cwd=wd)
+	output = subprocess.run(CMD, shell=True, capture_output=True, cwd=WORKDIR)
 
-	checkreturn = desired_output[0] == None or desired_output[0] == output.returncode
-	checkstdout = desired_output[1] == None or desired_output[1] in output.stdout.decode()
-	checkstderr = desired_output[2] == None or desired_output[2] in output.stderr.decode()
+	checkreturn = DESIRED_OUTPUT[0] == None or DESIRED_OUTPUT[0] == output.returncode
+	checkstdout = DESIRED_OUTPUT[1] == None or DESIRED_OUTPUT[1] in output.stdout.decode()
+	checkstderr = DESIRED_OUTPUT[2] == None or DESIRED_OUTPUT[2] in output.stderr.decode()
 	r = (checkreturn and checkstdout and checkstderr)
 
 	return r
@@ -73,7 +75,7 @@ def check_output(iseqs, cmd, desired_output, wd) :
 # reduces the sequence, cutting first and last nucleotides
 # cutting in half successively with an iterative binary search
 # returns the new reduced sequence, and adds it to the species's list of seqs
-def strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, flag_begining) :
+def strip_sequence(seq, sp, iseqs, flag_begining) :
 	
 	(begin, end) = seq
 	seq1 = seq
@@ -88,7 +90,7 @@ def strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, flag_begining) :
 		# get the most central quarter
 		seq1 = (imid, end) if flag_begining else (begin, imid)
 		sp.subseqs.add(seq1)
-		r = check_output(iseqs, cmd, desired_output, wd)
+		r = check_output(iseqs)
 		sp.subseqs.remove(seq1)
 
 		# if the cut maintain the output, we keep cutting toward the center of the sequence
@@ -112,12 +114,10 @@ def strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, flag_begining) :
 	sp.subseqs.add(seq1)
 	return seq1
 
-		
-	
 
 # reduces the sequences of the specie and return the new set of SpecieData instances
 # use an iterative binary search
-def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
+def reduce_specie(sp, iseqs) :
 	
 	tmpsubseqs = sp.subseqs.copy()
 	
@@ -132,7 +132,7 @@ def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 		
 		# case where the target fragment is in the first half
 		sp.subseqs.add(seq1)
-		if middle != end and check_output(iseqs, cmd, desired_output, wd) :
+		if middle != end and check_output(iseqs) :
 			tmpsubseqs.add(seq1)
 			continue
 		else :
@@ -140,7 +140,7 @@ def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 		
 		# case where the target fragment is in the second half
 		sp.subseqs.add(seq2)
-		if middle != begin and check_output(iseqs, cmd, desired_output, wd) :
+		if middle != begin and check_output(iseqs) :
 			tmpsubseqs.add(seq2)
 			continue
 		else :
@@ -151,7 +151,7 @@ def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 		# TODO : relancer le check_output pour trouver les co-factors qui ne sont pas de part et d'autre du milieu de la séquence
 		sp.subseqs.add(seq1)
 		sp.subseqs.add(seq2)
-		if middle != end and middle != begin and check_output(iseqs, cmd, desired_output, wd) :
+		if middle != end and middle != begin and check_output(iseqs) :
 			tmpsubseqs.add(seq1)
 			tmpsubseqs.add(seq2)
 			continue
@@ -162,26 +162,43 @@ def reduce_specie(sp, iseqs, cmd, desired_output, wd) :
 		# case where the target sequence is on both sides of the cut
 		# so we strip first and last unnecessary nucleotids
 		sp.subseqs.add(seq)
-		seq = strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, True)
-		seq = strip_sequence(seq, sp, iseqs, cmd, desired_output, wd, False)
+		seq = strip_sequence(seq, sp, iseqs, True)
+		seq = strip_sequence(seq, sp, iseqs, False)
 	
 	return iseqs	
 
 
 # returns every reduced sequences in a set of SpecieData
-def reduce_data(iseqs, cmd, desired_output, wd) :
+def reduce_one_file(iseqs) :
 	cutted_iseqs = iseqs.copy()
 
 	for sp in iseqs :
 		# check if desired output is obtained whithout the sequence of the specie
 		cutted_iseqs.remove(sp)
 		
-		if not check_output(cutted_iseqs, cmd, desired_output, wd) :
+		if not check_output(cutted_iseqs) :
 			# otherwise reduces the sequence
 			cutted_iseqs.add(sp)
-			cutted_iseqs = reduce_specie(sp, cutted_iseqs, cmd, desired_output, wd)
+			cutted_iseqs = reduce_specie(sp, cutted_iseqs)
 
 	return cutted_iseqs
+
+
+'''
+def reduce_all_files(seqsbyfile) :
+	reduced = seqsbyfile.copy()
+
+	for iseqs in seqsbyfile :
+		# check if desired output is obtained whithout the sequences of the file
+		reduced.remove(seqsbyfile)
+		
+		if not check_output(reduced) :
+			# otherwise reduces the sequences of the file
+			reduced.add(iseqs)
+			reduced = reduce_one_file(iseqs, cutted_iseqs)
+
+	return reduced
+'''
 
 
 # returns the representation of a fasta file parsed in a set of SpecieData
@@ -304,26 +321,28 @@ if __name__=='__main__' :
 
 	# get the arguments
 	args = get_args()
-	desired_output = (args.returncode, args.stdout, args.stderr)
+	DESIRED_OUTPUT = (args.returncode, args.stdout, args.stderr)
+	CMD = args.cmdline
 
-	# initialise the directories
-	wd = args.workdir if args.workdir[len(args.workdir)-1] != '/' else args.workdir[:-1]
-	outputfile = get_outputfile(args.destfile, wd)
+	# initialise the globals and the directories
+	WORKDIR = args.workdir if args.workdir[len(args.workdir)-1] != '/' else args.workdir[:-1]
+	outputfile = get_outputfile(args.destfile, WORKDIR)
 	INPUTFILE = args.filename
-	TMPFILE = wd + "/" + TMPFILE
+	TMPFILE = WORKDIR + "/" + TMPFILE
 	init_tmpfile(args.filename)
+	# from here every global stays constant
 
 	if args.verbose :
 		print()
-		print(" - Desired output : " + str(desired_output))
-		print(" - Working directory : " + wd)
+		print(" - Desired output : " + str(DESIRED_OUTPUT))
+		print(" - Working directory : " + WORKDIR)
 		print(" - Tmp filename : " + TMPFILE)
 		print(" - Output filename : " + outputfile + "\n")
 
 	iseqs = parsing(INPUTFILE)
 
 	# process the data
-	cutted_iseqs = reduce_data(iseqs, args.cmdline, desired_output, wd)
+	cutted_iseqs = reduce_one_file(iseqs)
 
 	iseqs_to_file(cutted_iseqs, outputfile)
 	rm_tmpfile()
