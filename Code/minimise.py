@@ -10,12 +10,12 @@ CMD = ""
 
 class SpecieData :
 	
-	def __init__(self, header, begin_seq, end_seq, file) : # initialise the specie with one seq
+	def __init__(self, header, begin_seq, end_seq, filename) : # initialise the specie with one seq
 		self.header = header # string of the specie name and comments
 		self.begin_seq = begin_seq # int, constant
 		self.subseqs = set() # int tuple set, variable represents the index of the first char of the seq in the file (included) and the index of the last one (excluded)
 		self.subseqs.add((begin_seq, end_seq)) # adds the index of the entire seq to the set
-		self.file = file # string filename
+		self.filename = filename # string filename
 	
 	def __str__(self) : # debug function
 		s = ">" + self.header + "\n"
@@ -204,7 +204,7 @@ def parsing(filename) :
 					
 					if header != None :
 						end = c - len(line) - 1
-						specie = SpecieData(header, begin, end)
+						specie = SpecieData(header, begin, end, filename)
 						sequences.add(specie)
 					
 					header = line[1:].rstrip('\n')
@@ -213,12 +213,11 @@ def parsing(filename) :
 				
 		# adds the last seq to the set
 		end = c
-		specie = SpecieData(header, begin, end)
+		specie = SpecieData(header, begin, end, filename)
 		sequences.add(specie)
-		
 		return sequences
 
-	except IOError as e :
+	except IOError :
 		print("File " + filename + " not found.")
 		raise
 		
@@ -256,20 +255,19 @@ def init_tmpfile(inputfile) :
 		with open(TMPFILE, 'x') :
 			shutil.copy(inputfile, TMPFILE)
 
-	except OSError as e :
+	except OSError :
 
 		if os.path.isfile(TMPFILE) :
 			print(TMPFILE + " already exists, unable to create it.")
 			truncate = input("Do you want to truncate " + TMPFILE + " ? (y,n) ")
 			if truncate == 'y' : 
-				with open(TMPFILE, 'w') as tmp :
-					shutil.copy(inputfile, TMPFILE)
+				shutil.copy(inputfile, TMPFILE)
 			else :
 				exit(0)
 		
 		else :
 			print("Unable to create the file" + TMPFILE + " : a directory with this name already exists.")
-			raise(e)
+			raise
 
 
 # set the destination file to "workdir/minimised.fasta" if None specified
