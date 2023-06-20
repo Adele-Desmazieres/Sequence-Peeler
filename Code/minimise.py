@@ -224,6 +224,7 @@ def parsing(filename) :
 
 
 # takes a file that contains the files name
+# and return the set of sets of species by file
 def parsing_multiple_files(fofname) :
 	try :
 		with open(fofname) as fof :
