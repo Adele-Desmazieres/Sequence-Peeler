@@ -64,10 +64,13 @@ def iseqs_to_file(iseqs, filename) :
 def sp_to_files(spbyfile) :
 
 	for iseqs in spbyfile :
-
+		
+		# récupérer le nom du fichier de ce set() graĉe à l'une de ses espèces
 		tmp_specie = iseqs.pop()
 		filename = tmp_specie.filename
 		iseqs.add(tmp_specie)
+
+		# lancer l'écriture du fichier
 		iseqs_to_file(iseqs, filename)
 
 
@@ -250,7 +253,6 @@ def parsing(filename) :
 		raise
 		
 
-
 # takes a file that contains the files name
 # and return the set of sets of species by file
 def parsing_multiple_files(filesnames) :
@@ -325,14 +327,14 @@ def fof_to_list(fofname) :
 		print("File " + fofname + " not found.")
 		raise
 
-
+'''
 # set the destination file to "workdir/minimised.fasta" if None specified
 def get_destdir(destdir, workdir) :
 	if destdir == None :
 		destdir = workdir
 	destdir = destdir if destdir[len(destdir)-1] == '/' else destdir + '/'
 	return destdir
-
+'''
 
 def get_args() :
 	parser = argparse.ArgumentParser(prog="Genome Fuzzing")
@@ -366,7 +368,7 @@ if __name__=='__main__' :
 
 	# initialise the globals
 	WORKDIR = args.workdir if args.workdir[len(args.workdir)-1] == "/" else args.workdir + "/"
-	destdir = get_destdir(args.destdir, WORKDIR)
+	#destdir = get_destdir(args.destdir, WORKDIR)
 	FOFNAME = args.file_of_files_name
 	INFILESNAMES = fof_to_list(FOFNAME)
 	# from here every global should be constant
@@ -381,15 +383,16 @@ if __name__=='__main__' :
 		print(" - Working directory : " + WORKDIR)
 		print(" - Fofname : " + FOFNAME)
 		print(" - Input files names : " + INFILESNAMES)
-		print(" - Output directory : " + destdir + "\n")
+		#print(" - Output directory : " + destdir + "\n")
 
-	spbyfile = parsing_multiple_files(None) # TODO : remplacer None
+	# parse the sequences of each file
+	spbyfile = parsing_multiple_files(INFILESNAMES)
 
 	# process the data
-	reduced_spbyfile = reduce_all_files(spbyfile)
+	#spbyfile = reduce_all_files(spbyfile)
 
 	# writes the reduced seqs in files in destination directory
-	sp_to_files(reduced_spbyfile, destdir)
+	sp_to_files(spbyfile)
 
 	# removes the temporary files and rename the original ones
 	rm_tmpfiles(INFILESNAMES)
