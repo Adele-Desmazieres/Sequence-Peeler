@@ -35,16 +35,16 @@ def printset(iseqs) :
 
 
 # writes the sequences and their species in a fasta file
-def iseqs_to_file(iseqs, filename) :
-	finput = open(None, 'r') # TODO : remplacer None
-	f2 = open(filename, 'w')
+def iseqs_to_file(iseqs, inputfilename, outputfilename) :
+	inputfile = open(inputfilename, 'r')
+	outputfile = open(outputfilename, 'w')
 
-	ordered_iseqs = sorted(list(iseqs), key=lambda x:x.begin_seq) # alphabetical ordering of header's sequences
+	ordered_iseqs = sorted(list(iseqs), key=lambda x:x.begin_seq) # ordering of header's sequences by index of first nucleotide of the initial sequence
 	for (i, sp) in enumerate(ordered_iseqs) :
 			
 		for (j, subseq) in enumerate(sorted(list(sp.subseqs), key=lambda x:x[0])) :
 			if i != 0 or j != 0 :
-				f2.write("\n")
+				outputfile.write("\n")
 			
 			(begin, end) = subseq
 
@@ -52,26 +52,31 @@ def iseqs_to_file(iseqs, filename) :
 			firstnuclsubseq = begin - firstcharseq + 1
 			header = sp.header + ", position " + str(firstnuclsubseq)
 			
-			f2.write(">" + header + "\n")
-			finput.seek(begin)
-			actual_seq = finput.read(end-begin)
-			f2.write(actual_seq)
+			outputfile.write(">" + header + "\n")
+			inputfile.seek(begin)
+			actual_seq = inputfile.read(end-begin)
+			outputfile.write(actual_seq)
 	
-	finput.close()
-	f2.close()
+	inputfile.close()
+	outputfile.close()
 
 
-def sp_to_files(spbyfile) :
-
+def sp_to_files(spbyfile, input_extension, output_extension) :
+	#print(spbyfile)
 	for iseqs in spbyfile :
 		
-		# récupérer le nom du fichier de ce set() graĉe à l'une de ses espèces
-		tmp_specie = iseqs.pop()
-		filename = tmp_specie.filename
-		iseqs.add(tmp_specie)
+		if len(iseqs) != 0 :
+			# récupérer le nom du fichier de ce set() graĉe à l'une de ses espèces
+			tmp_specie = iseqs.pop()
+			filename = tmp_specie.filename
+			iseqs.add(tmp_specie)
 
-		# lancer l'écriture du fichier
-		iseqs_to_file(iseqs, filename)
+			p = Path(filename)
+			outputfilename = str(p.parent) + "/" + p.stem + output_extension + p.suffix
+			inputfilename = str(p.parent) + "/" + p.stem + input_extension + p.suffix
+
+			# lancer l'écriture du fichier
+			iseqs_to_file(iseqs, inputfilename, outputfilename)
 
 
 # check that the execution of cmd with the sequences as input gives the desired output
@@ -256,23 +261,32 @@ def parsing(filename) :
 # takes a file that contains the files name
 # and return the set of sets of species by file
 def parsing_multiple_files(filesnames) :
-	spbyfile = set()
+	spbyfile = []
 
 	for filename in filesnames :
 		if len(filename) >= 1 :
 			seqs = parsing(filename)
-			spbyfile.add(seqs)
+			spbyfile.append(seqs)
 
 	return spbyfile
 
 
 # removes the file TMPFILE
+'''
 def rm_tmpfiles(filesnames) :
 
 	for fname in filesnames : 
 		p = Path(fname)
 		tmp_fname = str(p.parent) + p.stem + TMP_EXTENSION + p.suffix
 		Path(tmp_fname).rename(Path(fname)) # rename the original files with their original name, and truncate the temporary files
+'''
+
+def rename_files(filesnames, old_extension, new_extension) :
+	for fname in filesnames : 
+		p = Path(fname)
+		old_fname = str(p.parent) + "/" + p.stem + old_extension + p.suffix
+		new_fname = str(p.parent) + "/" + p.stem + new_extension + p.suffix
+		Path(old_fname).rename(Path(new_fname))
 
 
 # copies a file with the same name with an extension to its stem
@@ -280,7 +294,7 @@ def rm_tmpfiles(filesnames) :
 # raise an error if a directory with its name already exists
 def copy_file_with_extension(filename, extension) :
 	p = Path(filename)
-	tmp_fname = str(p.parent) + p.stem + extension + p.suffix
+	tmp_fname = str(p.parent) + "/" + p.stem + extension + p.suffix
 
 	try :
 		with open(tmp_fname, 'x') : # exclusive creation
@@ -288,7 +302,7 @@ def copy_file_with_extension(filename, extension) :
 
 	except OSError :
 
-		if Path(tmp_fname).isfile() :
+		if Path(tmp_fname).is_file() :
 			print(tmp_fname + " file already exists, unable to create it.")
 			truncate = input("Do you want to truncate " + tmp_fname + " ? (y,n) ")
 			if truncate == 'y' : 
@@ -327,14 +341,6 @@ def fof_to_list(fofname) :
 		print("File " + fofname + " not found.")
 		raise
 
-'''
-# set the destination file to "workdir/minimised.fasta" if None specified
-def get_destdir(destdir, workdir) :
-	if destdir == None :
-		destdir = workdir
-	destdir = destdir if destdir[len(destdir)-1] == '/' else destdir + '/'
-	return destdir
-'''
 
 def get_args() :
 	parser = argparse.ArgumentParser(prog="Genome Fuzzing")
@@ -368,7 +374,6 @@ if __name__=='__main__' :
 
 	# initialise the globals
 	WORKDIR = args.workdir if args.workdir[len(args.workdir)-1] == "/" else args.workdir + "/"
-	#destdir = get_destdir(args.destdir, WORKDIR)
 	FOFNAME = args.file_of_files_name
 	INFILESNAMES = fof_to_list(FOFNAME)
 	# from here every global should be constant
@@ -382,25 +387,41 @@ if __name__=='__main__' :
 		print(" - Desired output : " + str(DESIRED_OUTPUT))
 		print(" - Working directory : " + WORKDIR)
 		print(" - Fofname : " + FOFNAME)
-		print(" - Input files names : " + INFILESNAMES)
-		#print(" - Output directory : " + destdir + "\n")
+		print(" - Input files names : " + str(INFILESNAMES))
 
 	# parse the sequences of each file
 	spbyfile = parsing_multiple_files(INFILESNAMES)
-
+	print(type(spbyfile))
+	print(type(spbyfile[0]))
+	
+	# test qui ajoute 1 à l'index d'une seq du premier fichier
+	'''
+	sp = spbyfile[0].pop()
+	subseq = sp.subseqs.pop()
+	sp.subseqs.add((subseq[0] + 1, subseq[1]))
+	spbyfile[0].add(sp)
+	'''
+	
 	# process the data
 	#spbyfile = reduce_all_files(spbyfile)
 
-	# writes the reduced seqs in files in destination directory
-	sp_to_files(spbyfile)
-
-	# removes the temporary files and rename the original ones
-	rm_tmpfiles(INFILESNAMES)
-
-	#if args.verbose :
-	#	print("\n - Minimised sequences:")
-	#	with open(outputfile) as f :
-	#		print(f.read())
-	#	print("\nDone.")
+	# writes the reduced seqs in files
+	sp_to_files(spbyfile, "_tmp", "")
+	
+	# rename reduced files with _result
+	rename_files(INFILESNAMES + [FOFNAME], "", "_result")
+	# rename _tmp files to their original name
+	rename_files(INFILESNAMES + [FOFNAME], "_tmp", "")
+	
+	if args.verbose :
+		for filename in [FOFNAME] + INFILESNAMES :
+			p = Path(filename)
+			outputfilename = str(p.parent) + "/" + p.stem + "_result" + p.suffix
+			
+			print("\n" + outputfilename + " :\n")
+			with open(outputfilename) as f :
+				print(f.read())
+	
+		print("\nDone.")
 
 	

@@ -1,1 +1,2 @@
 ../Data/example.fasta
+../Tests/t0.fasta
