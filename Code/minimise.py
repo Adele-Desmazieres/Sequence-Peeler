@@ -5,7 +5,6 @@ import subprocess
 import shutil
 import argparse
 
-#TMPFILE = "tmp.fasta"
 TMP_EXTENSION = "_tmp"
 INFILESNAMES = []
 FOFNAME = ""
@@ -33,6 +32,20 @@ def printset(iseqs) :
 	for sp in list(iseqs) :
 		print(sp)
 
+def print_debug(spbyfile) :
+	print("\nACTUAL STATE")
+	for iseqs in spbyfile :
+		printset(iseqs)
+
+def print_files_debug() :
+	print("\nFILES")
+	for filename in [FOFNAME] + INFILESNAMES :
+		p = Path(filename)
+		outputfilename = str(p.parent) + "/" + p.stem + "_result" + p.suffix
+			
+		print("\n\"" + outputfilename + "\" :\n")
+		with open(outputfilename) as f :
+			print(f.read())
 
 # writes the sequences and their species in a fasta file
 def iseqs_to_file(iseqs, inputfilename, outputfilename) :
@@ -62,34 +75,44 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 
 
 def sp_to_files(spbyfile, input_extension, output_extension) :
-	#print(spbyfile)
-	for iseqs in spbyfile :
+	
+	try :
+		with open(FOFNAME, 'w') as fof :
 		
-		if len(iseqs) != 0 :
-			# récupérer le nom du fichier de ce set() graĉe à l'une de ses espèces
-			tmp_specie = iseqs.pop()
-			filename = tmp_specie.filename
-			iseqs.add(tmp_specie)
-
-			p = Path(filename)
-			outputfilename = str(p.parent) + "/" + p.stem + output_extension + p.suffix
-			inputfilename = str(p.parent) + "/" + p.stem + input_extension + p.suffix
-
-			# lancer l'écriture du fichier
-			iseqs_to_file(iseqs, inputfilename, outputfilename)
+			for iseqs in spbyfile :
+				
+				if len(iseqs) != 0 :
+					# récupérer le nom du fichier de ce set() grâce à l'une de ses espèces
+					tmp_specie = iseqs.pop()
+					filename = tmp_specie.filename
+					iseqs.add(tmp_specie)
+		
+					p = Path(filename)
+					outputfilename = str(p.parent) + "/" + p.stem + output_extension + p.suffix
+					inputfilename = str(p.parent) + "/" + p.stem + input_extension + p.suffix
+					
+					# l'écrire dans le fof
+					fof.write(outputfilename + "\n")
+		
+					# lancer l'écriture du fichier
+					iseqs_to_file(iseqs, inputfilename, outputfilename)
+		
+	except IOError :
+		raise
 
 
 # check that the execution of cmd with the sequences as input gives the desired output
 # TODO : execute on the cluster
 def check_output(spbyfile) :
-	sp_to_files(spbyfile)
+	sp_to_files(spbyfile, TMP_EXTENSION, "")
+	print_files_debug()
 	output = subprocess.run(CMD, shell=True, capture_output=True, cwd=WORKDIR)
 
 	checkreturn = DESIRED_OUTPUT[0] == None or DESIRED_OUTPUT[0] == output.returncode
 	checkstdout = DESIRED_OUTPUT[1] == None or DESIRED_OUTPUT[1] in output.stdout.decode()
 	checkstderr = DESIRED_OUTPUT[2] == None or DESIRED_OUTPUT[2] in output.stderr.decode()
 	r = (checkreturn and checkstdout and checkstderr)
-
+	print("Result :", r)
 	return r
 
 
@@ -201,21 +224,26 @@ def reduce_one_file(iseqs, spbyfile) :
 			# otherwise reduces the sequence
 			reduced_iseqs.add(sp)
 			reduced_iseqs = reduce_specie(sp, reduced_iseqs, spbyfile)
+		
+		print_debug(spbyfile)
 
 	return reduced_iseqs
 
 
 def reduce_all_files(spbyfile) :
 	reduced = spbyfile.copy()
+	#print_debug(reduced)
 
 	for iseqs in spbyfile :
 		# check if desired output is obtained whithout the sequences of the file
 		reduced.remove(iseqs)
+		#print_debug(reduced)
 		
 		if not check_output(reduced) :
+			#print("PAS SANS X")
 			# otherwise reduces the sequences of the file
-			reduced.add(iseqs)
-			reduced = reduce_one_file(iseqs, reduced)
+			reduced.append(iseqs)
+			#reduced = reduce_one_file(iseqs, reduced)
 
 	return reduced
 
@@ -271,22 +299,13 @@ def parsing_multiple_files(filesnames) :
 	return spbyfile
 
 
-# removes the file TMPFILE
-'''
-def rm_tmpfiles(filesnames) :
-
-	for fname in filesnames : 
-		p = Path(fname)
-		tmp_fname = str(p.parent) + p.stem + TMP_EXTENSION + p.suffix
-		Path(tmp_fname).rename(Path(fname)) # rename the original files with their original name, and truncate the temporary files
-'''
-
 def rename_files(filesnames, old_extension, new_extension) :
 	for fname in filesnames : 
 		p = Path(fname)
 		old_fname = str(p.parent) + "/" + p.stem + old_extension + p.suffix
 		new_fname = str(p.parent) + "/" + p.stem + new_extension + p.suffix
-		Path(old_fname).rename(Path(new_fname))
+		if Path(old_fname).is_file() :
+			Path(old_fname).rename(Path(new_fname))
 
 
 # copies a file with the same name with an extension to its stem
@@ -365,6 +384,8 @@ def get_args() :
 	return args
 
 
+
+
 if __name__=='__main__' :
 
 	# get the arguments
@@ -388,11 +409,10 @@ if __name__=='__main__' :
 		print(" - Working directory : " + WORKDIR)
 		print(" - Fofname : " + FOFNAME)
 		print(" - Input files names : " + str(INFILESNAMES))
+		print()
 
 	# parse the sequences of each file
 	spbyfile = parsing_multiple_files(INFILESNAMES)
-	print(type(spbyfile))
-	print(type(spbyfile[0]))
 	
 	# test qui ajoute 1 à l'index d'une seq du premier fichier
 	'''
@@ -403,25 +423,19 @@ if __name__=='__main__' :
 	'''
 	
 	# process the data
-	#spbyfile = reduce_all_files(spbyfile)
+	spbyfile = reduce_all_files(spbyfile)
 
 	# writes the reduced seqs in files
-	sp_to_files(spbyfile, "_tmp", "")
+	sp_to_files(spbyfile, TMP_EXTENSION, "")
+	# TODO : writting fof
 	
 	# rename reduced files with _result
 	rename_files(INFILESNAMES + [FOFNAME], "", "_result")
 	# rename _tmp files to their original name
-	rename_files(INFILESNAMES + [FOFNAME], "_tmp", "")
+	rename_files(INFILESNAMES + [FOFNAME], TMP_EXTENSION, "")
 	
 	if args.verbose :
-		for filename in [FOFNAME] + INFILESNAMES :
-			p = Path(filename)
-			outputfilename = str(p.parent) + "/" + p.stem + "_result" + p.suffix
-			
-			print("\n" + outputfilename + " :\n")
-			with open(outputfilename) as f :
-				print(f.read())
-	
+		print_files_debug()
 		print("\nDone.")
 
 	
