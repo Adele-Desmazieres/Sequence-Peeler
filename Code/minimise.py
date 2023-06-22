@@ -217,33 +217,33 @@ def reduce_one_file(iseqs, spbyfile) :
 	reduced_iseqs = iseqs.copy()
 
 	for sp in iseqs :
+		print_files_debug()
 		# check if desired output is obtained whithout the sequence of the specie
 		reduced_iseqs.remove(sp)
 		
 		if not check_output(spbyfile) :
 			# otherwise reduces the sequence
 			reduced_iseqs.add(sp)
-			reduced_iseqs = reduce_specie(sp, reduced_iseqs, spbyfile)
+			#reduced_iseqs = reduce_specie(sp, reduced_iseqs, spbyfile)
 		
-		print_debug(spbyfile)
-
 	return reduced_iseqs
 
 
 def reduce_all_files(spbyfile) :
 	reduced = spbyfile.copy()
-	#print_debug(reduced)
 
 	for iseqs in spbyfile :
-		# check if desired output is obtained whithout the sequences of the file
+		print_files_debug()
+		print("ISEQS : ")
+		printset(iseqs)
+		# check if desired output is obtained whithout the file
 		reduced.remove(iseqs)
 		#print_debug(reduced)
 		
 		if not check_output(reduced) :
-			#print("PAS SANS X")
 			# otherwise reduces the sequences of the file
 			reduced.append(iseqs)
-			#reduced = reduce_one_file(iseqs, reduced)
+			reduced = reduce_one_file(iseqs, reduced)
 
 	return reduced
 
