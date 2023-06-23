@@ -52,6 +52,7 @@ def print_files_debug(extension) :
 def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	inputfile = open(inputfilename, 'r')
 	outputfile = open(outputfilename, 'w')
+	#nb_line_breaks = 0
 
 	ordered_iseqs = sorted(list(iseqs), key=lambda x:x.begin_seq) # ordering of header's sequences by index of first nucleotide of the initial sequence
 	for (i, sp) in enumerate(ordered_iseqs) :
@@ -61,14 +62,16 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 				outputfile.write("\n")
 			
 			(begin, end) = subseq
+			inputfile.seek(begin)
+			actual_seq = inputfile.read(end-begin)
+			#nb_line_breaks = actual_seq.count('\n') # TODO: compter les \n entre subseqs
 
 			firstcharseq = sp.begin_seq
+			#firstnuclsubseq = begin - firstcharseq + 1 - nb_line_breaks
 			firstnuclsubseq = begin - firstcharseq + 1
 			header = sp.header + ", position " + str(firstnuclsubseq)
 			
 			outputfile.write(">" + header + "\n")
-			inputfile.seek(begin)
-			actual_seq = inputfile.read(end-begin)
 			outputfile.write(actual_seq)
 	
 	inputfile.close()
