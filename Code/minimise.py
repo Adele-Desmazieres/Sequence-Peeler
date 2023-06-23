@@ -37,9 +37,9 @@ def print_debug(spbyfile) :
 	for iseqs in spbyfile :
 		printset(iseqs)
 
-def print_files_debug(extension) :
+def print_files_debug(files, extension) :
 	print("\nFILES")
-	for filename in [FOFNAME] + INFILESNAMES :
+	for filename in files :
 		p = Path(filename)
 		outputfilename = str(p.parent) + "/" + p.stem + extension + p.suffix
 			
@@ -365,20 +365,48 @@ def fof_to_list(fofname) :
 		raise
 
 
+def rm_file(filename) :
+	p = Path(filename)
+	p.unlink()
+
+def make_fof(fofname) :
+	try :
+		with open(fofname, 'x') as fof : # création exclusive
+			for i, filename in enumerate(INFILESNAMES) :
+				if i != 0 :
+					fof.write("\n")
+				fof.write(filename)
+
+	except OSError :
+		p = Path(fofname)
+		if p.is_file() :
+			print(fofname + " file already exists, unable to create it.")
+			truncate = input("Do you want to truncate " + fofname + " ? (y,n) ")
+			if truncate == 'y' : 
+				p.unlink()
+				make_fof(fofname)
+			else :
+				exit(0)
+		
+		else :
+			print(fofname + " directory already exists, unable to create it.")
+			raise
+
+
 def get_args() :
 	parser = argparse.ArgumentParser(prog="Genome Fuzzing")
 
 	# options that takes a value
 	parser.add_argument('-d', '--destdir', default=None)
 	parser.add_argument('-e', '--stderr', default=None)
-	#parser.add_argument('-f', '--onefasta', action='store_true')
+	parser.add_argument('-f', '--onefasta', action='store_true')
 	parser.add_argument('-o', '--stdout', default=None)
 	parser.add_argument('-r', '--returncode', default=None, type=int)
 	parser.add_argument('-v', '--verbose', action='store_true')
 	parser.add_argument('-w', '--workdir', default=os.getcwd())
 
 	# positionnal arguments
-	parser.add_argument('file_of_files_name')
+	parser.add_argument('filename')
 	parser.add_argument('cmdline')
 	
 	args = parser.parse_args()
@@ -388,25 +416,33 @@ def get_args() :
 	return args
 
 
-
-
 if __name__=='__main__' :
 
 	# get the arguments
 	args = get_args()
+
+	# initialise the globals
 	DESIRED_OUTPUT = (args.returncode, args.stdout, args.stderr)
 	CMD = args.cmdline
 
-	# initialise the globals
+	nofof = args.onefasta
+	if nofof : 
+		FOFNAME = "fof.txt"
+		INFILESNAMES = [args.filename]
+		make_fof(FOFNAME)
+	else :
+		FOFNAME = args.filename
+		INFILESNAMES = fof_to_list(FOFNAME)
+
 	WORKDIR = args.workdir if args.workdir[len(args.workdir)-1] == "/" else args.workdir + "/"
-	FOFNAME = args.file_of_files_name
-	INFILESNAMES = fof_to_list(FOFNAME)
 	# from here every global should be constant
 
-	# copies the input files in temporary files, not to overwrite the temporary ones
+	# copies the input files in temporary files, to not overwrite the temporary ones
 	copy_infiles(INFILESNAMES)
 	copy_fof(FOFNAME)
 
+	print_files_debug([FOFNAME] + INFILESNAMES, "")
+	
 	if args.verbose :
 		print()
 		print(" - Desired output : " + str(DESIRED_OUTPUT))
@@ -418,25 +454,27 @@ if __name__=='__main__' :
 	# parse the sequences of each file
 	spbyfile = parsing_multiple_files(INFILESNAMES)
 	
-	# test qui ajoute 1 à l'index d'une seq du premier fichier
-	'''
-	sp = spbyfile[0].pop()
-	subseq = sp.subseqs.pop()
-	sp.subseqs.add((subseq[0] + 1, subseq[1]))
-	spbyfile[0].add(sp)
-	'''
+	print_files_debug([FOFNAME] + INFILESNAMES, "")
 	
 	# process the data
 	spbyfile = reduce_all_files(spbyfile)
 
+	print_files_debug([FOFNAME] + INFILESNAMES, "")
+
 	# writes the reduced seqs in files with _result extension
 	sp_to_files(spbyfile, TMP_EXTENSION, "_result")
 	
+	print_files_debug([FOFNAME] + INFILESNAMES, "_result")
+		
 	# rename _tmp files to their original name
 	rename_files(INFILESNAMES + [FOFNAME], TMP_EXTENSION, "")
 	
-	if args.verbose :
-		print_files_debug("_result")
-		print("\nDone.")
+	print_files_debug([FOFNAME] + INFILESNAMES, "")
 
-	
+	if nofof :
+		rm_file(FOFNAME)
+
+	if args.verbose :
+		files = INFILESNAMES if nofof else [FOFNAME] + INFILESNAMES
+		print_files_debug(files, "_result")
+		print("\nDone.")
