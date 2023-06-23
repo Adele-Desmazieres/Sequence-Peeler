@@ -37,15 +37,16 @@ def print_debug(spbyfile) :
 	for iseqs in spbyfile :
 		printset(iseqs)
 
-def print_files_debug() :
+def print_files_debug(extension) :
 	print("\nFILES")
 	for filename in [FOFNAME] + INFILESNAMES :
 		p = Path(filename)
-		outputfilename = str(p.parent) + "/" + p.stem + "_result" + p.suffix
+		outputfilename = str(p.parent) + "/" + p.stem + extension + p.suffix
 			
 		print("\n\"" + outputfilename + "\" :\n")
 		with open(outputfilename) as f :
 			print(f.read())
+	print()
 
 # writes the sequences and their species in a fasta file
 def iseqs_to_file(iseqs, inputfilename, outputfilename) :
@@ -105,7 +106,7 @@ def sp_to_files(spbyfile, input_extension, output_extension) :
 # TODO : execute on the cluster
 def check_output(spbyfile) :
 	sp_to_files(spbyfile, TMP_EXTENSION, "")
-	print_files_debug()
+	#print_files_debug("")
 	output = subprocess.run(CMD, shell=True, capture_output=True, cwd=WORKDIR)
 
 	checkreturn = DESIRED_OUTPUT[0] == None or DESIRED_OUTPUT[0] == output.returncode
@@ -167,7 +168,7 @@ def reduce_specie(sp, iseqs, spbyfile) :
 	
 	while tmpsubseqs : # while set not empty
 		
-		seq = tmpsubseqs.pop() # take an arbitrary element
+		seq = tmpsubseqs.pop() # take an arbitrary sequence of the specie
 		sp.subseqs.remove(seq)
 		(begin, end) = seq
 		middle = (seq[0] + seq[1]) // 2		
@@ -191,7 +192,7 @@ def reduce_specie(sp, iseqs, spbyfile) :
 			sp.subseqs.remove(seq2)		
 		
 		# case where there are two co-factor sequences
-		# so we cut the seq in half and add them to the seq to be reduced
+		# so we cut the seq in half and add them to the set to be reduced
 		# TODO : relancer le check_output pour trouver les co-factors qui ne sont pas de part et d'autre du milieu de la séquence
 		sp.subseqs.add(seq1)
 		sp.subseqs.add(seq2)
@@ -214,38 +215,52 @@ def reduce_specie(sp, iseqs, spbyfile) :
 
 # returns every reduced sequences of a file in a set of SpecieData
 def reduce_one_file(iseqs, spbyfile) :
-	reduced_iseqs = iseqs.copy()
+	if len(iseqs) <= 1 :
+		return iseqs
 
-	for sp in iseqs :
-		print_files_debug()
+	copy_iseqs = iseqs.copy()
+
+	for sp in copy_iseqs :
+		print("____________________________________")
+		print_files_debug("")
+		print("____________________________________")
 		# check if desired output is obtained whithout the sequence of the specie
-		reduced_iseqs.remove(sp)
+		iseqs.remove(sp)
+		print("Trying to remove a specie", sp.header)
 		
 		if not check_output(spbyfile) :
 			# otherwise reduces the sequence
-			reduced_iseqs.add(sp)
-			#reduced_iseqs = reduce_specie(sp, reduced_iseqs, spbyfile)
+			iseqs.add(sp)
+			#reduce_specie(sp, iseqs, spbyfile)
+		else :
+			print("Removing a specie")
 		
-	return reduced_iseqs
+	return iseqs
 
 
 def reduce_all_files(spbyfile) :
-	reduced = spbyfile.copy()
+	copy_spbyfile = spbyfile.copy()
+	print_files_debug("")
 
-	for iseqs in spbyfile :
-		print_files_debug()
-		print("ISEQS : ")
-		printset(iseqs)
+	for iseqs in copy_spbyfile :
+		print("====================================")
+		print_files_debug("")
+		print("====================================")
+		#print("ISEQS : ")
+		#printset(iseqs)
+
 		# check if desired output is obtained whithout the file
-		reduced.remove(iseqs)
-		#print_debug(reduced)
-		
-		if not check_output(reduced) :
-			# otherwise reduces the sequences of the file
-			reduced.append(iseqs)
-			reduced = reduce_one_file(iseqs, reduced)
+		spbyfile.remove(iseqs)
+		print("Trying to remove a file")
 
-	return reduced
+		if not check_output(spbyfile) :
+			# otherwise reduces the sequences of the file
+			spbyfile.append(iseqs)
+			reduce_one_file(iseqs, spbyfile)
+		else :
+			print("Removing a file")
+
+	return spbyfile
 
 
 # returns the representation of a fasta file parsed in a set of SpecieData
@@ -435,7 +450,7 @@ if __name__=='__main__' :
 	rename_files(INFILESNAMES + [FOFNAME], TMP_EXTENSION, "")
 	
 	if args.verbose :
-		print_files_debug()
+		print_files_debug("_result")
 		print("\nDone.")
 
 	

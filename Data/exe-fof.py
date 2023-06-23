@@ -31,6 +31,7 @@ def parsing(filename) :
 
 	except IOError :
 		print("Fichier introuvable.")
+		exit(2)
 
 
 def parsing_multiple_files(filesnames) :
