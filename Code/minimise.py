@@ -119,12 +119,12 @@ def check_output(spbyfile) :
 
 # reduces the sequence, cutting first and last nucleotides
 # cutting in half successively with an iterative binary search
-# returns the new reduced sequence, and adds it to the species's list of seqs
+# returns the new reduced sequence, WITHOUT ADDING IT TO THE SPECIE'S LIST OF SEQS
 def strip_sequence(seq, sp, iseqs, spbyfile, flag_begining) :
-	
+	print("\tseq :", seq)
+	print("\tseq :", sp.subseqs)
 	(begin, end) = seq
-	seq1 = seq
-	sp.subseqs.remove(seq)
+	seq1 = (begin, end)
 
 	imin = begin
 	imax = end
@@ -156,7 +156,6 @@ def strip_sequence(seq, sp, iseqs, spbyfile, flag_begining) :
 	
 		imid = (imin+imax) // 2
 	
-	sp.subseqs.add(seq1)
 	return seq1
 
 
@@ -171,6 +170,9 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		seq = tmpsubseqs.pop() # take an arbitrary sequence of the specie
 		sp.subseqs.remove(seq)
 		(begin, end) = seq
+
+		print(seq)
+
 		middle = (seq[0] + seq[1]) // 2		
 		seq1 = (begin, middle)
 		seq2 = (middle, end)
@@ -178,6 +180,7 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		# case where the target fragment is in the first half
 		sp.subseqs.add(seq1)
 		if middle != end and check_output(spbyfile) :
+			print("case 1")
 			tmpsubseqs.add(seq1)
 			continue
 		else :
@@ -186,6 +189,7 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		# case where the target fragment is in the second half
 		sp.subseqs.add(seq2)
 		if middle != begin and check_output(spbyfile) :
+			print("case 2")
 			tmpsubseqs.add(seq2)
 			continue
 		else :
@@ -197,6 +201,7 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		sp.subseqs.add(seq1)
 		sp.subseqs.add(seq2)
 		if middle != end and middle != begin and check_output(spbyfile) :
+			print("case 3")
 			tmpsubseqs.add(seq1)
 			tmpsubseqs.add(seq2)
 			continue
@@ -204,26 +209,26 @@ def reduce_specie(sp, iseqs, spbyfile) :
 			sp.subseqs.remove(seq1)
 			sp.subseqs.remove(seq2)
 		
+		print("case 4")
+
 		# case where the target sequence is on both sides of the cut
 		# so we strip first and last unnecessary nucleotids
-		sp.subseqs.add(seq)
+		#sp.subseqs.add(seq)
 		seq = strip_sequence(seq, sp, iseqs, spbyfile, True)
 		seq = strip_sequence(seq, sp, iseqs, spbyfile, False)
+		sp.subseqs.add(seq)
 	
 	return iseqs	
 
 
 # returns every reduced sequences of a file in a set of SpecieData
 def reduce_one_file(iseqs, spbyfile) :
-	if len(iseqs) <= 1 :
-		return iseqs
-
 	copy_iseqs = iseqs.copy()
 
 	for sp in copy_iseqs :
-		print("____________________________________")
-		print_files_debug("")
-		print("____________________________________")
+		#print("____________________________________")
+		#print_files_debug("")
+		#print("____________________________________")
 		# check if desired output is obtained whithout the sequence of the specie
 		iseqs.remove(sp)
 		print("Trying to remove a specie", sp.header)
@@ -231,7 +236,7 @@ def reduce_one_file(iseqs, spbyfile) :
 		if not check_output(spbyfile) :
 			# otherwise reduces the sequence
 			iseqs.add(sp)
-			#reduce_specie(sp, iseqs, spbyfile)
+			reduce_specie(sp, iseqs, spbyfile)
 		else :
 			print("Removing a specie")
 		
@@ -240,12 +245,12 @@ def reduce_one_file(iseqs, spbyfile) :
 
 def reduce_all_files(spbyfile) :
 	copy_spbyfile = spbyfile.copy()
-	print_files_debug("")
+	#print_files_debug("")
 
 	for iseqs in copy_spbyfile :
-		print("====================================")
-		print_files_debug("")
-		print("====================================")
+		#print("====================================")
+		#print_files_debug("")
+		#print("====================================")
 		#print("ISEQS : ")
 		#printset(iseqs)
 
