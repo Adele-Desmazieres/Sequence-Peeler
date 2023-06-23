@@ -48,6 +48,7 @@ def print_files_debug(extension) :
 			print(f.read())
 	print()
 
+
 # writes the sequences and their species in a fasta file
 def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	inputfile = open(inputfilename, 'r')
@@ -70,7 +71,7 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 			#firstnuclsubseq = begin - firstcharseq + 1 - nb_line_breaks
 			firstnuclsubseq = begin - firstcharseq + 1
 			header = sp.header + ", position " + str(firstnuclsubseq)
-			
+
 			outputfile.write(">" + header + "\n")
 			outputfile.write(actual_seq)
 	
@@ -78,12 +79,16 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	outputfile.close()
 
 
+# writes the content of the fof and the fasta files
+# reading from files with the input_extension, and writting in ones with the output_extension
 def sp_to_files(spbyfile, input_extension, output_extension) :
+	p = Path(FOFNAME)
+	fofname_extended = str(p.parent) + "/" + p.stem + output_extension + p.suffix
 	
 	try :
-		with open(FOFNAME, 'w') as fof :
+		with open(fofname_extended, 'w') as fof :
 		
-			for iseqs in spbyfile :
+			for (i, iseqs) in enumerate(spbyfile) :
 				
 				if len(iseqs) != 0 :
 					# récupérer le nom du fichier de ce set() grâce à l'une de ses espèces
@@ -95,8 +100,11 @@ def sp_to_files(spbyfile, input_extension, output_extension) :
 					outputfilename = str(p.parent) + "/" + p.stem + output_extension + p.suffix
 					inputfilename = str(p.parent) + "/" + p.stem + input_extension + p.suffix
 					
+					if i != 0 :
+						fof.write("\n")
+
 					# l'écrire dans le fof
-					fof.write(outputfilename + "\n")
+					fof.write(outputfilename)
 		
 					# lancer l'écriture du fichier
 					iseqs_to_file(iseqs, inputfilename, outputfilename)
@@ -109,14 +117,12 @@ def sp_to_files(spbyfile, input_extension, output_extension) :
 # TODO : execute on the cluster
 def check_output(spbyfile) :
 	sp_to_files(spbyfile, TMP_EXTENSION, "")
-	#print_files_debug("")
 	output = subprocess.run(CMD, shell=True, capture_output=True, cwd=WORKDIR)
 
 	checkreturn = DESIRED_OUTPUT[0] == None or DESIRED_OUTPUT[0] == output.returncode
 	checkstdout = DESIRED_OUTPUT[1] == None or DESIRED_OUTPUT[1] in output.stdout.decode()
 	checkstderr = DESIRED_OUTPUT[2] == None or DESIRED_OUTPUT[2] in output.stderr.decode()
 	r = (checkreturn and checkstdout and checkstderr)
-	print("Result :", r)
 	return r
 
 
@@ -124,8 +130,6 @@ def check_output(spbyfile) :
 # cutting in half successively with an iterative binary search
 # returns the new reduced sequence, WITHOUT ADDING IT TO THE SPECIE'S LIST OF SEQS
 def strip_sequence(seq, sp, iseqs, spbyfile, flag_begining) :
-	print("\tseq :", seq)
-	print("\tseq :", sp.subseqs)
 	(begin, end) = seq
 	seq1 = (begin, end)
 
@@ -174,8 +178,6 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		sp.subseqs.remove(seq)
 		(begin, end) = seq
 
-		print(seq)
-
 		middle = (seq[0] + seq[1]) // 2		
 		seq1 = (begin, middle)
 		seq2 = (middle, end)
@@ -183,7 +185,6 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		# case where the target fragment is in the first half
 		sp.subseqs.add(seq1)
 		if middle != end and check_output(spbyfile) :
-			print("case 1")
 			tmpsubseqs.add(seq1)
 			continue
 		else :
@@ -192,7 +193,6 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		# case where the target fragment is in the second half
 		sp.subseqs.add(seq2)
 		if middle != begin and check_output(spbyfile) :
-			print("case 2")
 			tmpsubseqs.add(seq2)
 			continue
 		else :
@@ -204,7 +204,6 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		sp.subseqs.add(seq1)
 		sp.subseqs.add(seq2)
 		if middle != end and middle != begin and check_output(spbyfile) :
-			print("case 3")
 			tmpsubseqs.add(seq1)
 			tmpsubseqs.add(seq2)
 			continue
@@ -212,8 +211,6 @@ def reduce_specie(sp, iseqs, spbyfile) :
 			sp.subseqs.remove(seq1)
 			sp.subseqs.remove(seq2)
 		
-		print("case 4")
-
 		# case where the target sequence is on both sides of the cut
 		# so we strip first and last unnecessary nucleotids
 		#sp.subseqs.add(seq)
@@ -229,44 +226,28 @@ def reduce_one_file(iseqs, spbyfile) :
 	copy_iseqs = iseqs.copy()
 
 	for sp in copy_iseqs :
-		#print("____________________________________")
-		#print_files_debug("")
-		#print("____________________________________")
 		# check if desired output is obtained whithout the sequence of the specie
 		iseqs.remove(sp)
-		print("Trying to remove a specie", sp.header)
 		
 		if not check_output(spbyfile) :
 			# otherwise reduces the sequence
 			iseqs.add(sp)
 			reduce_specie(sp, iseqs, spbyfile)
-		else :
-			print("Removing a specie")
 		
 	return iseqs
 
 
 def reduce_all_files(spbyfile) :
 	copy_spbyfile = spbyfile.copy()
-	#print_files_debug("")
 
 	for iseqs in copy_spbyfile :
-		#print("====================================")
-		#print_files_debug("")
-		#print("====================================")
-		#print("ISEQS : ")
-		#printset(iseqs)
-
 		# check if desired output is obtained whithout the file
 		spbyfile.remove(iseqs)
-		print("Trying to remove a file")
 
 		if not check_output(spbyfile) :
 			# otherwise reduces the sequences of the file
 			spbyfile.append(iseqs)
 			reduce_one_file(iseqs, spbyfile)
-		else :
-			print("Removing a file")
 
 	return spbyfile
 
@@ -448,12 +429,9 @@ if __name__=='__main__' :
 	# process the data
 	spbyfile = reduce_all_files(spbyfile)
 
-	# writes the reduced seqs in files
-	sp_to_files(spbyfile, TMP_EXTENSION, "")
-	# TODO : writting fof
+	# writes the reduced seqs in files with _result extension
+	sp_to_files(spbyfile, TMP_EXTENSION, "_result")
 	
-	# rename reduced files with _result
-	rename_files(INFILESNAMES + [FOFNAME], "", "_result")
 	# rename _tmp files to their original name
 	rename_files(INFILESNAMES + [FOFNAME], TMP_EXTENSION, "")
 	
