@@ -66,11 +66,16 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 			(begin, end) = subseq
 			inputfile.seek(begin)
 			actual_seq = inputfile.read(end-begin)
-			#nb_line_breaks = actual_seq.count('\n') # TODO: compter les \n entre subseqs
-
+			
 			firstcharseq = sp.begin_seq
-			#firstnuclsubseq = begin - firstcharseq + 1 - nb_line_breaks
-			firstnuclsubseq = begin - firstcharseq + 1
+			
+			inputfile.seek(firstcharseq) # TODO : éviter de faire 2 lectures pour n'en faire qu'une seule
+			seq_from_begin = inputfile.read(begin-firstcharseq)
+			#print(seq_from_begin)
+			nb_line_breaks = seq_from_begin.count('\n') # compter les \n avant le début de seq
+
+			firstnuclsubseq = begin - firstcharseq + 1 - nb_line_breaks
+			#firstnuclsubseq = begin - firstcharseq + 1
 			header = sp.header + ", position " + str(firstnuclsubseq)
 
 			outputfile.write(">" + header + "\n")
