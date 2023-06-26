@@ -53,6 +53,7 @@ def print_files_debug(files, extension) :
 def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	inputfile = open(inputfilename, 'r')
 	outputfile = open(outputfilename, 'w')
+	outputfile.truncate(0)
 	#nb_line_breaks = 0
 
 	ordered_iseqs = sorted(list(iseqs), key=lambda x:x.begin_seq) # ordering of header's sequences by index of first nucleotide of the initial sequence
@@ -87,6 +88,8 @@ def sp_to_files(spbyfile, input_extension, output_extension) :
 	
 	try :
 		with open(fofname_extended, 'w') as fof :
+			
+			filestotruncate = INFILESNAMES.copy()
 		
 			for (i, iseqs) in enumerate(spbyfile) :
 				
@@ -94,6 +97,7 @@ def sp_to_files(spbyfile, input_extension, output_extension) :
 					# récupérer le nom du fichier de ce set() grâce à l'une de ses espèces
 					tmp_specie = iseqs.pop()
 					filename = tmp_specie.filename
+					filestotruncate.remove(filename)
 					iseqs.add(tmp_specie)
 		
 					p = Path(filename)
@@ -108,6 +112,11 @@ def sp_to_files(spbyfile, input_extension, output_extension) :
 		
 					# lancer l'écriture du fichier
 					iseqs_to_file(iseqs, inputfilename, outputfilename)
+					
+			for f in filestotruncate :
+				pt = Path(f)
+				ftruncate = str(pt.parent) + "/" + pt.stem + output_extension + pt.suffix
+				open(ftruncate, 'w').close()
 		
 	except IOError :
 		raise
@@ -238,6 +247,11 @@ def reduce_one_file(iseqs, spbyfile) :
 
 
 def reduce_all_files(spbyfile) :
+	
+	if len(spbyfile) == 1 :
+		reduce_one_file(spbyfile[0], spbyfile)
+		return spbyfile
+	
 	copy_spbyfile = spbyfile.copy()
 
 	for iseqs in copy_spbyfile :
@@ -441,38 +455,31 @@ if __name__=='__main__' :
 	copy_infiles(INFILESNAMES)
 	copy_fof(FOFNAME)
 
-	print_files_debug([FOFNAME] + INFILESNAMES, "")
-	
 	if args.verbose :
 		print()
 		print(" - Desired output : " + str(DESIRED_OUTPUT))
 		print(" - Working directory : " + WORKDIR)
 		print(" - Fofname : " + FOFNAME)
 		print(" - Input files names : " + str(INFILESNAMES))
+		print(" - Commande : " + CMD)
 		print()
 
 	# parse the sequences of each file
 	spbyfile = parsing_multiple_files(INFILESNAMES)
 	
-	print_files_debug([FOFNAME] + INFILESNAMES, "")
-	
 	# process the data
 	spbyfile = reduce_all_files(spbyfile)
-
-	print_files_debug([FOFNAME] + INFILESNAMES, "")
 
 	# writes the reduced seqs in files with _result extension
 	sp_to_files(spbyfile, TMP_EXTENSION, "_result")
 	
-	print_files_debug([FOFNAME] + INFILESNAMES, "_result")
-		
 	# rename _tmp files to their original name
 	rename_files(INFILESNAMES + [FOFNAME], TMP_EXTENSION, "")
 	
-	print_files_debug([FOFNAME] + INFILESNAMES, "")
-
 	if nofof :
 		rm_file(FOFNAME)
+		p = Path(FOFNAME)
+		rm_file(str(p.parent) + "/" + p.stem + "_result" + p.suffix)
 
 	if args.verbose :
 		files = INFILESNAMES if nofof else [FOFNAME] + INFILESNAMES
