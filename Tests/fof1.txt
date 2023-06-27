@@ -1,0 +1,2 @@
+../Tests/t3.fasta
+../Tests/t4.fasta
