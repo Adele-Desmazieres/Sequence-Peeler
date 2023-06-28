@@ -34,7 +34,7 @@ def rotation_set(pattern, hashing=True) :
     return patts
     
 
-
+# raise an exception if the pattern is in the fasta file
 def matching(filename, pattern) :
 
     # prepare the reading frame
@@ -46,18 +46,22 @@ def matching(filename, pattern) :
     patts = rotation_set(pattern, True)
     
     with open(filename, 'r') as fd :
+        
         for c in chars(fd) :
-            if c != '\n' :
-                frame[pointer] = c
-                #print(frame)
-                s = ''.join(frame)
-                h = hash(s)
-                if h in patts :
-                    #print(True)
-                    reordered_s = ''.join(frame[pointer+1:] + frame[:pointer+1])
-                    if reordered_s == pattern :
-                        raise Exception(pattern + " found in file.")
-                pointer = (pointer + 1) % n
+            
+            if c == '\n' : # ignore breaklines
+                continue
+                
+            frame[pointer] = c
+            s = ''.join(frame)
+            h = hash(s)
+        
+            if h in patts :
+                reordered_s = ''.join(frame[pointer+1:] + frame[:pointer+1])
+                if reordered_s == pattern :
+                    raise Exception(pattern + " found in file.")
+                
+            pointer = (pointer + 1) % n
 
 
 if __name__ == '__main__' :
