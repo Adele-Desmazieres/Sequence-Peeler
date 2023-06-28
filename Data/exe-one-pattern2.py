@@ -1,57 +1,69 @@
 import sys
 
-# copied code from https://stackoverflow.com/a/26209275
-def chunks(filename, buffer_size=4096):
-    with open(filename, "rb") as fp:
-        chunk = fp.read(buffer_size)
-        while chunk:
-            yield chunk
-            chunk = fp.read(buffer_size)
+### code from https://stackoverflow.com/a/26209275
+def chunks(fd, buffer_size=4096):
+    chunk = fd.read(buffer_size)
+    while chunk:
+        yield chunk
+        chunk = fd.read(buffer_size)
 
-def chars(filename, buffersize=4096):
-    for chunk in chunks(filename, buffersize):
+def chars(fd, buffersize=4096):
+    for chunk in chunks(fd, buffersize):
         for char in chunk:
             yield char
+### end of code copy
+
+
+# create a set of all rotations of the pattern
+# pattern rotations are hash of string if hashing is True
+# else they are lists of chars
+def rotation_set(pattern, hashing=True) :
+    pattchars = [*pattern]
+    patts = set()
+    tmp = pattchars.copy()
+
+    for i in range(len(pattern)) :
+        tmp = pattchars[i:] + pattchars[:i]
+        s = ''.join(tmp)
+        
+        if hashing :
+            patts.add(hash(s))
+        else :
+            patts.add(s)
+    
+    return patts
+    
 
 
 def matching(filename, pattern) :
 
-    try :
-        with open(filename, 'r') as f :
-            
-            # prepare the reading frame
-            n = len(pattern)
-            pointer = 0
-            frame = [""] * n
-
-            # create a list of all rotations of the pattern as lists of chars
-            # TODO transformer ca en set d'entiers hachant les strings des rotations
-            pattchars = [*pattern]
-            patts = list()
-            tmp = pattchars.copy()
-            for i in range(n) :
-                tmp = pattchars[i:] + pattchars[:i]
-                #patts.append(pattchars)
-                patts.append(''.join(tmp))
-
-            for c in chars(filename) :
-                frame[pointer] = chr(c)
+    # prepare the reading frame
+    n = len(pattern)
+    pointer = 0
+    frame = [''] * n
+    
+    # prepare the list of pattern rotations
+    patts = rotation_set(pattern, True)
+    
+    with open(filename, 'r') as fd :
+        for c in chars(fd) :
+            if c != '\n' :
+                frame[pointer] = c
                 #print(frame)
                 s = ''.join(frame)
-                if s in patts :
+                h = hash(s)
+                if h in patts :
+                    #print(True)
                     reordered_s = ''.join(frame[pointer+1:] + frame[:pointer+1])
                     if reordered_s == pattern :
                         raise Exception(pattern + " found in file.")
                 pointer = (pointer + 1) % n
 
-    except IOError :
-        print("Fichier introuvable.")
-
 
 if __name__ == '__main__' :
     filename = sys.argv[1]
-    pattern = "CAACTAGTTGCATCATACAACTAATAAACGTGGTGAATCCAATTGTCGAGATTTATTTTTTATAAAATTATCCTAAGTAAACAGAAGG"
     #pattern = "ATCG"
+    pattern = "TGTTTTGGCGGAAGAGACATCGATAAGTAAGCTTGATAGCAGATTAAATCGACAGGTCATAACGGGACGTGTTGATAAAACAGAATTTGCCTGGCGGCC"
     matching(filename, pattern)
     print("Done.")
 
