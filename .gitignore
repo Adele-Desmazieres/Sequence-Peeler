@@ -6,3 +6,5 @@ Data/dist/
 Data/*.spec
 Results
 Data/*.fasta
+**/schema_dossiers.pdf
+**/schema_dossiers.odg
