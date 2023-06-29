@@ -3,7 +3,7 @@ import string
 
 
 def matching(sequences) :
-    pattern = "ACATTATTTTAATAATCCAACTAGTTGCATCATACAACTAATAAACGTGGTGAATCCAATTGTCGAGATTTATTTTTTATAAAATTATCCTAAGTAAACAGAAGG"
+    pattern = "AAAA"
     for specie,seq in sequences.items() :
         for i in range(len(seq) - len(pattern) + 1) :
             if seq[i:i+len(pattern)] == pattern :

@@ -67,7 +67,7 @@ def matching(filename, pattern) :
 if __name__ == '__main__' :
     filename = sys.argv[1]
     #pattern = "ATCG"
-    pattern = "TGTTTTGGCGGAAGAGACATCGATAAGTAAGCTTGATAGCAGATTAAATCGACAGGTCATAACGGGACGTGTTGATAAAACAGAATTTGCCTGGCGGCC"
+    pattern = "TCCTTCTGCGCATTGTAA"
     matching(filename, pattern)
     print("Done.")
 

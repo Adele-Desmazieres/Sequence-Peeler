@@ -11,6 +11,7 @@ FOFNAME = ""
 CMD = ""
 WORKDIR = ""
 DESIRED_OUTPUT = None
+NB_PROCESS = 1
 
 class SpecieData :
 	
@@ -127,8 +128,14 @@ def sp_to_files(spbyfile, input_extension, output_extension) :
 
 # check that the execution of cmd with the sequences as input gives the desired output
 # TODO : execute on the cluster
-def check_output(spbyfile) :
-	sp_to_files(spbyfile, TMP_EXTENSION, "")
+def check_output(spbyfile, input_extension=TMP_EXTENSION, output_extension="") :
+	global NB_PROCESS
+	sp_to_files(spbyfile, input_extension, output_extension)
+
+	#print("Starting process " + str(NB_PROCESS))
+	print("subprocess " + str(NB_PROCESS))
+	#print_debug(spbyfile)
+	NB_PROCESS += 1
 	output = subprocess.run(CMD, shell=True, capture_output=True, cwd=WORKDIR)
 
 	checkreturn = DESIRED_OUTPUT[0] == None or DESIRED_OUTPUT[0] == output.returncode
@@ -193,6 +200,9 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		middle = (seq[0] + seq[1]) // 2		
 		seq1 = (begin, middle)
 		seq2 = (middle, end)
+
+		# TODO : préparer les fichiers de tests avec des noms différents
+		# préparer les processus qui vont être exécutés
 		
 		# case where the target fragment is in the first half
 		sp.subseqs.add(seq1)
@@ -452,13 +462,14 @@ if __name__=='__main__' :
 		INFILESNAMES = fof_to_list(FOFNAME)
 
 	WORKDIR = args.workdir if args.workdir[len(args.workdir)-1] == "/" else args.workdir + "/"
-	# from here every global should be constant
+	# from here every global should be constant (except NB_PROCESS)
 
 	# copies the input files in temporary files, to not overwrite the temporary ones
 	copy_infiles(INFILESNAMES)
 	copy_fof(FOFNAME)
 
 	if args.verbose :
+	#	pass
 		print()
 		print(" - Desired output : " + str(DESIRED_OUTPUT))
 		print(" - Working directory : " + WORKDIR)
@@ -483,6 +494,8 @@ if __name__=='__main__' :
 		rm_file(FOFNAME)
 		p = Path(FOFNAME)
 		rm_file(str(p.parent) + "/" + p.stem + "_result" + p.suffix)
+
+	print("Process number: " + str(NB_PROCESS))
 
 	if args.verbose :
 		files = INFILESNAMES if nofof else [FOFNAME] + INFILESNAMES
