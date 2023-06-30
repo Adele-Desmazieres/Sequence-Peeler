@@ -18,8 +18,7 @@ class SpecieData :
 	def __init__(self, header, begin_seq, end_seq, filename) : # initialise the specie with one seq
 		self.header = header # string of the specie name and comments
 		self.begin_seq = begin_seq # int, constant
-		self.subseqs = set() # int tuple set, variable represents the index of the first char of the seq in the file (included) and the index of the last one (excluded)
-		self.subseqs.add((begin_seq, end_seq)) # adds the index of the entire seq to the set
+		self.subseqs = [(begin_seq, end_seq)] # int tuple list, variable represents the index of the first char of the seq in the file (included) and the index of the last one (excluded)
 		self.filename = filename # string filename
 	
 	def __str__(self) : # debug function
@@ -58,7 +57,7 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	ordered_iseqs = sorted(list(iseqs), key=lambda x:x.begin_seq) # ordering of header's sequences by index of first nucleotide of the initial sequence
 	for (i, sp) in enumerate(ordered_iseqs) :
 			
-		for (j, subseq) in enumerate(sorted(list(sp.subseqs), key=lambda x:x[0])) :
+		for (j, subseq) in enumerate(sorted(sp.subseqs, key=lambda x:x[0])) :
 			if i != 0 or j != 0 :
 				outputfile.write("\n")
 			
@@ -157,7 +156,7 @@ def strip_sequence(seq, sp, spbyfile, flag_begining) :
 
 		# get the most central quarter
 		seq1 = (imid, end) if flag_begining else (begin, imid)
-		sp.subseqs.add(seq1)
+		sp.subseqs.append(seq1)
 		r = check_output(spbyfile)
 		sp.subseqs.remove(seq1)
 
@@ -182,8 +181,8 @@ def strip_sequence(seq, sp, spbyfile, flag_begining) :
 	return seq1
 
 
-# reduces the sequences of the specie and return the new set of SpecieData instances
-# use an iterative binary search
+# reduces the sequences of the specie and puts it in the list spbyfile
+# use an iterative binary search, returns nothing
 def reduce_specie(sp, spbyfile) :
 	
 	tmpsubseqs = sp.subseqs.copy()
@@ -202,17 +201,17 @@ def reduce_specie(sp, spbyfile) :
 		# préparer les processus qui vont être exécutés et les lancer en parallele
 		
 		# case where the target fragment is in the first half
-		sp.subseqs.add(seq1)
+		sp.subseqs.append(seq1)
 		if middle != end and check_output(spbyfile) :
-			tmpsubseqs.add(seq1)
+			tmpsubseqs.append(seq1)
 			continue
 		else :
 			sp.subseqs.remove(seq1)		
 		
 		# case where the target fragment is in the second half
-		sp.subseqs.add(seq2)
+		sp.subseqs.append(seq2)
 		if middle != begin and check_output(spbyfile) :
-			tmpsubseqs.add(seq2)
+			tmpsubseqs.append(seq2)
 			continue
 		else :
 			sp.subseqs.remove(seq2)		
@@ -220,11 +219,11 @@ def reduce_specie(sp, spbyfile) :
 		# case where there are two co-factor sequences
 		# so we cut the seq in half and add them to the set to be reduced
 		# TODO : relancer le check_output pour trouver les co-factors qui ne sont pas de part et d'autre du milieu de la séquence
-		sp.subseqs.add(seq1)
-		sp.subseqs.add(seq2)
+		sp.subseqs.append(seq1)
+		sp.subseqs.append(seq2)
 		if middle != end and middle != begin and check_output(spbyfile) :
-			tmpsubseqs.add(seq1)
-			tmpsubseqs.add(seq2)
+			tmpsubseqs.append(seq1)
+			tmpsubseqs.append(seq2)
 			continue
 		else :
 			sp.subseqs.remove(seq1)
@@ -234,7 +233,7 @@ def reduce_specie(sp, spbyfile) :
 		# so we strip first and last unnecessary nucleotids
 		seq = strip_sequence(seq, sp, spbyfile, True)
 		seq = strip_sequence(seq, sp, spbyfile, False)
-		sp.subseqs.add(seq)
+		sp.subseqs.append(seq)
 	
 	return None
 
@@ -306,7 +305,7 @@ def parsing(filename) :
 		end = c
 		specie = SpecieData(header, begin, end, filename)
 		sequences.append(specie)
-		#sequences.sort(key=lamda x:)
+		sequences.sort(key=lambda x:x.subseqs[0][1] - x.subseqs[0][0], reverse=True) # order by seq length from bigger to smaller, to minimize bigger sequences in first
 		return sequences
 
 	except IOError :
@@ -315,9 +314,9 @@ def parsing(filename) :
 		
 
 # takes a file that contains the files name
-# and return the set of sets of species by file
+# and return the list of lists of species by file
 def parsing_multiple_files(filesnames) :
-	spbyfile = []
+	spbyfile = list()
 
 	for filename in filesnames :
 		if len(filename) >= 1 :
@@ -421,7 +420,6 @@ def get_args() :
 	parser = argparse.ArgumentParser(prog="Genome Fuzzing")
 
 	# options that takes a value
-	parser.add_argument('-d', '--destdir', default=None)
 	parser.add_argument('-e', '--stderr', default=None)
 	parser.add_argument('-f', '--onefasta', action='store_true')
 	parser.add_argument('-o', '--stdout', default=None)
