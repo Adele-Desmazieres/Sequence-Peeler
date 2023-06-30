@@ -29,17 +29,18 @@ class SpecieData :
 
 
 def printset(iseqs) :
-	print()
+	#print()
 	for sp in list(iseqs) :
 		print(sp)
 
 def print_debug(spbyfile) :
-	print("\nACTUAL STATE")
+	print("ACTUAL STATE")
 	for iseqs in spbyfile :
 		printset(iseqs)
+	print()
 
 def print_files_debug(files, extension) :
-	print("\nFILES")
+	print("FILES")
 	for filename in files :
 		p = Path(filename)
 		outputfilename = str(p.parent) + "/" + p.stem + extension + p.suffix
@@ -55,7 +56,6 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	inputfile = open(inputfilename, 'r')
 	outputfile = open(outputfilename, 'w')
 	outputfile.truncate(0)
-	#nb_line_breaks = 0
 
 	ordered_iseqs = sorted(list(iseqs), key=lambda x:x.begin_seq) # ordering of header's sequences by index of first nucleotide of the initial sequence
 	for (i, sp) in enumerate(ordered_iseqs) :
@@ -102,7 +102,7 @@ def sp_to_files(spbyfile, input_extension, output_extension) :
 					tmp_specie = iseqs.pop()
 					filename = tmp_specie.filename
 					filestotruncate.remove(filename)
-					iseqs.add(tmp_specie)
+					iseqs.append(tmp_specie)
 		
 					p = Path(filename)
 					outputfilename = str(p.parent) + "/" + p.stem + output_extension + p.suffix
@@ -134,7 +134,7 @@ def check_output(spbyfile, input_extension=TMP_EXTENSION, output_extension="") :
 
 	#print("Starting process " + str(NB_PROCESS))
 	print("subprocess " + str(NB_PROCESS))
-	#print_debug(spbyfile)
+	print_debug(spbyfile)
 	NB_PROCESS += 1
 	output = subprocess.run(CMD, shell=True, capture_output=True, cwd=WORKDIR)
 
@@ -148,7 +148,7 @@ def check_output(spbyfile, input_extension=TMP_EXTENSION, output_extension="") :
 # reduces the sequence, cutting first and last nucleotides
 # cutting in half successively with an iterative binary search
 # returns the new reduced sequence, WITHOUT ADDING IT TO THE SPECIE'S LIST OF SEQS
-def strip_sequence(seq, sp, iseqs, spbyfile, flag_begining) :
+def strip_sequence(seq, sp, spbyfile, flag_begining) :
 	(begin, end) = seq
 	seq1 = (begin, end)
 
@@ -236,8 +236,8 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		# case where the target sequence is on both sides of the cut
 		# so we strip first and last unnecessary nucleotids
 		#sp.subseqs.add(seq)
-		seq = strip_sequence(seq, sp, iseqs, spbyfile, True)
-		seq = strip_sequence(seq, sp, iseqs, spbyfile, False)
+		seq = strip_sequence(seq, sp, spbyfile, True)
+		seq = strip_sequence(seq, sp, spbyfile, False)
 		sp.subseqs.add(seq)
 	
 	return iseqs	
@@ -253,7 +253,7 @@ def reduce_one_file(iseqs, spbyfile) :
 		
 		if not check_output(spbyfile) :
 			# otherwise reduces the sequence
-			iseqs.add(sp)
+			iseqs.append(sp)
 			reduce_specie(sp, iseqs, spbyfile)
 		
 	return iseqs
@@ -279,7 +279,7 @@ def reduce_all_files(spbyfile) :
 	return spbyfile
 
 
-# returns the representation of a fasta file parsed in a set of SpecieData
+# returns the representation of a fasta file parsed in a list of SpecieData
 # they contain the index of the first and last characteres of the sequence in the file
 # the first is included and the last is excluded
 def parsing(filename) :
@@ -289,7 +289,7 @@ def parsing(filename) :
 			specie = None
 			begin = 0
 			end = 0
-			sequences = set()
+			sequences = list()
 			c = 0
 
 			for line in f :
@@ -300,7 +300,7 @@ def parsing(filename) :
 					if header != None :
 						end = c - len(line) - 1
 						specie = SpecieData(header, begin, end, filename)
-						sequences.add(specie)
+						sequences.append(specie)
 					
 					header = line[1:].rstrip('\n')
 					begin = c
@@ -309,7 +309,8 @@ def parsing(filename) :
 		# adds the last seq to the set
 		end = c
 		specie = SpecieData(header, begin, end, filename)
-		sequences.add(specie)
+		sequences.append(specie)
+		#sequences.sort(key=lamda x:)
 		return sequences
 
 	except IOError :
@@ -471,12 +472,12 @@ if __name__=='__main__' :
 	if args.verbose :
 	#	pass
 		print()
-		print(" - Desired output : " + str(DESIRED_OUTPUT))
-		print(" - Working directory : " + WORKDIR)
-		print(" - Fofname : " + FOFNAME)
-		print(" - Input files names : " + str(INFILESNAMES))
-		print(" - Commande : " + CMD)
-		print()
+	#	print(" - Desired output : " + str(DESIRED_OUTPUT))
+	#	print(" - Working directory : " + WORKDIR)
+	#	print(" - Fofname : " + FOFNAME)
+	#	print(" - Input files names : " + str(INFILESNAMES))
+	#	print(" - Commande : " + CMD)
+	#	print()
 
 	# parse the sequences of each file
 	spbyfile = parsing_multiple_files(INFILESNAMES)
