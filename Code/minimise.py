@@ -129,8 +129,8 @@ def check_output(spbyfile, input_extension=TMP_EXTENSION, output_extension="") :
 	global NB_PROCESS
 	sp_to_files(spbyfile, input_extension, output_extension)
 
-	print("subprocess " + str(NB_PROCESS))
-	print_debug(spbyfile)
+	#print("subprocess " + str(NB_PROCESS))
+	#print_debug(spbyfile)
 	NB_PROCESS += 1
 	output = subprocess.run(CMD, shell=True, capture_output=True, cwd=WORKDIR)
 
@@ -488,9 +488,8 @@ if __name__=='__main__' :
 		p = Path(FOFNAME)
 		rm_file(str(p.parent) + "/" + p.stem + "_result" + p.suffix)
 
-	print("Process number: " + str(NB_PROCESS))
-
 	if args.verbose :
+		print("Process number: " + str(NB_PROCESS))
 		files = INFILESNAMES if nofof else [FOFNAME] + INFILESNAMES
 		print("\nResults : ")
 		print_files_debug(files, "_result")
