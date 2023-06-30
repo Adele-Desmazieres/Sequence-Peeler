@@ -39,12 +39,11 @@ def print_debug(spbyfile) :
 	print()
 
 def print_files_debug(files, extension) :
-	print("FILES")
 	for filename in files :
 		p = Path(filename)
 		outputfilename = str(p.parent) + "/" + p.stem + extension + p.suffix
-			
-		print("\n\"" + outputfilename + "\" :\n")
+		print("\nIn file \"" + outputfilename + "\" :\n")
+
 		with open(outputfilename) as f :
 			print(f.read())
 	print()
@@ -467,14 +466,12 @@ if __name__=='__main__' :
 	copy_fof(FOFNAME)
 
 	if args.verbose :
-	#	pass
-		print()
-	#	print(" - Desired output : " + str(DESIRED_OUTPUT))
-	#	print(" - Working directory : " + WORKDIR)
-	#	print(" - Fofname : " + FOFNAME)
-	#	print(" - Input files names : " + str(INFILESNAMES))
-	#	print(" - Commande : " + CMD)
-	#	print()
+		s = "\n - Desired output : " + str(DESIRED_OUTPUT) + "\n"
+		s += " - Working directory : " + WORKDIR + "\n"
+		s += " - Fofname : " + FOFNAME + "\n"
+		s += " - Input files names : " + str(INFILESNAMES) + "\n"
+		s += " - Commande : " + CMD + "\n"
+		print(s)
 
 	# parse the sequences of each file
 	spbyfile = parsing_multiple_files(INFILESNAMES)
@@ -497,5 +494,6 @@ if __name__=='__main__' :
 
 	if args.verbose :
 		files = INFILESNAMES if nofof else [FOFNAME] + INFILESNAMES
+		print("\nResults : ")
 		print_files_debug(files, "_result")
 		print("\nDone.")
