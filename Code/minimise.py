@@ -29,7 +29,6 @@ class SpecieData :
 
 
 def printset(iseqs) :
-	#print()
 	for sp in list(iseqs) :
 		print(sp)
 
@@ -132,7 +131,6 @@ def check_output(spbyfile, input_extension=TMP_EXTENSION, output_extension="") :
 	global NB_PROCESS
 	sp_to_files(spbyfile, input_extension, output_extension)
 
-	#print("Starting process " + str(NB_PROCESS))
 	print("subprocess " + str(NB_PROCESS))
 	print_debug(spbyfile)
 	NB_PROCESS += 1
@@ -187,7 +185,7 @@ def strip_sequence(seq, sp, spbyfile, flag_begining) :
 
 # reduces the sequences of the specie and return the new set of SpecieData instances
 # use an iterative binary search
-def reduce_specie(sp, iseqs, spbyfile) :
+def reduce_specie(sp, spbyfile) :
 	
 	tmpsubseqs = sp.subseqs.copy()
 	
@@ -201,8 +199,8 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		seq1 = (begin, middle)
 		seq2 = (middle, end)
 
-		# TODO : préparer les fichiers de tests avec des noms différents
-		# préparer les processus qui vont être exécutés
+		# TODO : paralléliser, préparer les fichiers de tests avec des noms différents
+		# préparer les processus qui vont être exécutés et les lancer en parallele
 		
 		# case where the target fragment is in the first half
 		sp.subseqs.add(seq1)
@@ -235,15 +233,14 @@ def reduce_specie(sp, iseqs, spbyfile) :
 		
 		# case where the target sequence is on both sides of the cut
 		# so we strip first and last unnecessary nucleotids
-		#sp.subseqs.add(seq)
 		seq = strip_sequence(seq, sp, spbyfile, True)
 		seq = strip_sequence(seq, sp, spbyfile, False)
 		sp.subseqs.add(seq)
 	
-	return iseqs	
+	return None
 
 
-# returns every reduced sequences of a file in a set of SpecieData
+# returns every reduced sequences of a file in a list of SpecieData
 def reduce_one_file(iseqs, spbyfile) :
 	copy_iseqs = iseqs.copy()
 
@@ -254,7 +251,7 @@ def reduce_one_file(iseqs, spbyfile) :
 		if not check_output(spbyfile) :
 			# otherwise reduces the sequence
 			iseqs.append(sp)
-			reduce_specie(sp, iseqs, spbyfile)
+			reduce_specie(sp, spbyfile)
 		
 	return iseqs
 
