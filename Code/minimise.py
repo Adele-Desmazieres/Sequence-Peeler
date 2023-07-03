@@ -48,6 +48,20 @@ def print_files_debug(files, extension) :
 	print()
 
 
+### code from https://stackoverflow.com/a/26209275
+def chunks(fd, buffer_size=4096):
+    chunk = fd.read(buffer_size)
+    while chunk:
+        yield chunk
+        chunk = fd.read(buffer_size)
+
+def chars(fd, buffersize=4096):
+    for chunk in chunks(fd, buffersize):
+        for char in chunk:
+            yield char
+### end of code copy
+
+
 # writes the sequences and their species in a fasta file
 def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	inputfile = open(inputfilename, 'r')
@@ -62,19 +76,28 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 				outputfile.write("\n")
 			
 			(begin, end) = subseq
-			
 			firstcharseq = sp.begin_seq
-			
 			inputfile.seek(firstcharseq)
-			seq_from_begin = inputfile.read(begin-firstcharseq) # TODO : éviter de loader une grosse seq dans la mémoire
-			nb_line_breaks = seq_from_begin.count('\n') # compter les \n avant le début de seq
 			
-			actual_subseq = inputfile.read(end-begin)
-
+			# counts the number of line breaks in the seq before the first nucl of the subseq
+			nb_line_breaks = 0
+			ic = firstcharseq
+			for c in chars(inputfile) :
+				if ic < begin :
+					if c == '\n' : 
+						nb_line_breaks += 1
+					ic += 1
+				else :
+					break
+				
+			# writes the header
 			firstnuclsubseq = begin - firstcharseq + 1 - nb_line_breaks
 			header = sp.header + ", position " + str(firstnuclsubseq)
-
 			outputfile.write(">" + header + "\n")
+			
+			# read the subseq from the input and writes it in the output
+			inputfile.seek(begin)
+			actual_subseq = inputfile.read(end-begin)
 			outputfile.write(actual_subseq)
 	
 	inputfile.close()
