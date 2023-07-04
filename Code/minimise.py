@@ -6,11 +6,6 @@ import shutil
 import argparse
 
 TMP_EXTENSION = "_tmp"
-INFILESNAMES = []
-FOFNAME = ""
-CMD = ""
-WORKDIR = ""
-DESIRED_OUTPUT = None
 NB_PROCESS = 1
 
 class SpecieData :
@@ -26,6 +21,17 @@ class SpecieData :
 		s += str(self.subseqs)
 		return s
 
+
+class CmdArgs :
+
+	def __init__(self, subcmdline, fofname, infilesnames, outfilesnames, desired_output) :
+		self.subcmdline = subcmdline
+		self.fofname = fofname
+		self.infilesnames = infilesnames
+		self.outfilesnames = outfilesnames
+		self.desired_output = desired_output
+		self.infilesnames = fof_to_list(self.fofname)
+	
 
 def printset(iseqs) :
 	for sp in list(iseqs) :
@@ -106,14 +112,14 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 
 # writes the content of the fof and the fasta files
 # reading from files with the input_extension, and writting in ones with the output_extension
-def sp_to_files(spbyfile, input_extension, output_extension) :
-	p = Path(FOFNAME)
+def sp_to_files(spbyfile, cmdargs, input_extension, output_extension) :
+	p = Path(cmdargs.fofname)
 	fofname_extended = str(p.parent) + "/" + p.stem + output_extension + p.suffix
 	
 	try :
 		with open(fofname_extended, 'w') as fof :
 			
-			filestotruncate = INFILESNAMES.copy()
+			filestotruncate = cmdargs.infilesnames.copy()
 		
 			for (i, iseqs) in enumerate(spbyfile) :
 				
@@ -148,18 +154,21 @@ def sp_to_files(spbyfile, input_extension, output_extension) :
 
 # check that the execution of cmd with the sequences as input gives the desired output
 # TODO : execute on the cluster
-def check_output(spbyfile, input_extension=TMP_EXTENSION, output_extension="") :
+def check_output(spbyfile, cmdargs, input_extension=TMP_EXTENSION, output_extension="") :
 	global NB_PROCESS
-	sp_to_files(spbyfile, input_extension, output_extension)
-
 	#print("subprocess " + str(NB_PROCESS))
 	#print_debug(spbyfile)
 	NB_PROCESS += 1
-	output = subprocess.run(CMD, shell=True, capture_output=True, cwd=WORKDIR)
 
-	checkreturn = DESIRED_OUTPUT[0] == None or DESIRED_OUTPUT[0] == output.returncode
-	checkstdout = DESIRED_OUTPUT[1] == None or DESIRED_OUTPUT[1] in output.stdout.decode()
-	checkstderr = DESIRED_OUTPUT[2] == None or DESIRED_OUTPUT[2] in output.stderr.decode()
+	sp_to_files(spbyfile, cmdargs, input_extension, output_extension)
+	
+	#output = subprocess.run(cmdargs.subcmdline, shell=True, capture_output=True, cwd=WORKDIR)
+	output = subprocess.run(cmdargs.subcmdline, shell=True, capture_output=True)
+	dout = cmdargs.desired_output
+
+	checkreturn = dout[0] == None or dout[0] == output.returncode
+	checkstdout = dout[1] == None or dout[1] in output.stdout.decode()
+	checkstderr = dout[2] == None or dout[2] in output.stderr.decode()
 	r = (checkreturn and checkstdout and checkstderr)
 	return r
 
@@ -167,7 +176,7 @@ def check_output(spbyfile, input_extension=TMP_EXTENSION, output_extension="") :
 # reduces the sequence, cutting first and last nucleotides
 # cutting in half successively with an iterative binary search
 # returns the new reduced sequence, WITHOUT ADDING IT TO THE SPECIE'S LIST OF SEQS
-def strip_sequence(seq, sp, spbyfile, flag_begining) :
+def strip_sequence(seq, sp, spbyfile, flag_begining, cmdargs) :
 	(begin, end) = seq
 	seq1 = (begin, end)
 
@@ -180,7 +189,7 @@ def strip_sequence(seq, sp, spbyfile, flag_begining) :
 		# get the most central quarter
 		seq1 = (imid, end) if flag_begining else (begin, imid)
 		sp.subseqs.append(seq1)
-		r = check_output(spbyfile)
+		r = check_output(spbyfile, cmdargs)
 		sp.subseqs.remove(seq1)
 
 		# if the cut maintain the output, we keep cutting toward the center of the sequence
@@ -206,7 +215,7 @@ def strip_sequence(seq, sp, spbyfile, flag_begining) :
 
 # reduces the sequences of the specie and puts it in the list spbyfile
 # use an iterative binary search, returns nothing
-def reduce_specie(sp, spbyfile) :
+def reduce_specie(sp, spbyfile, cmdargs) :
 	
 	tmpsubseqs = sp.subseqs.copy()
 	
@@ -225,7 +234,7 @@ def reduce_specie(sp, spbyfile) :
 		
 		# case where the target fragment is in the first half
 		sp.subseqs.append(seq1)
-		if middle != end and check_output(spbyfile) :
+		if middle != end and check_output(spbyfile, cmdargs) :
 			tmpsubseqs.append(seq1)
 			continue
 		else :
@@ -233,7 +242,7 @@ def reduce_specie(sp, spbyfile) :
 		
 		# case where the target fragment is in the second half
 		sp.subseqs.append(seq2)
-		if middle != begin and check_output(spbyfile) :
+		if middle != begin and check_output(spbyfile, cmdargs) :
 			tmpsubseqs.append(seq2)
 			continue
 		else :
@@ -244,7 +253,7 @@ def reduce_specie(sp, spbyfile) :
 		# TODO : relancer le check_output pour trouver les co-factors qui ne sont pas de part et d'autre du milieu de la séquence
 		sp.subseqs.append(seq1)
 		sp.subseqs.append(seq2)
-		if middle != end and middle != begin and check_output(spbyfile) :
+		if middle != end and middle != begin and check_output(spbyfile, cmdargs) :
 			tmpsubseqs.append(seq1)
 			tmpsubseqs.append(seq2)
 			continue
@@ -254,33 +263,33 @@ def reduce_specie(sp, spbyfile) :
 		
 		# case where the target sequence is on both sides of the cut
 		# so we strip first and last unnecessary nucleotids
-		seq = strip_sequence(seq, sp, spbyfile, True)
-		seq = strip_sequence(seq, sp, spbyfile, False)
+		seq = strip_sequence(seq, sp, spbyfile, True, cmdargs)
+		seq = strip_sequence(seq, sp, spbyfile, False, cmdargs)
 		sp.subseqs.append(seq)
 	
 	return None
 
 
 # returns every reduced sequences of a file in a list of SpecieData
-def reduce_one_file(iseqs, spbyfile) :
+def reduce_one_file(iseqs, spbyfile, cmdargs) :
 	copy_iseqs = iseqs.copy()
 
 	for sp in copy_iseqs :
 		# check if desired output is obtained whithout the sequence of the specie
 		iseqs.remove(sp)
 		
-		if not check_output(spbyfile) :
+		if not check_output(spbyfile, cmdargs) :
 			# otherwise reduces the sequence
 			iseqs.append(sp)
-			reduce_specie(sp, spbyfile)
+			reduce_specie(sp, spbyfile, cmdargs)
 		
 	return iseqs
 
 
-def reduce_all_files(spbyfile) :
+def reduce_all_files(spbyfile, cmdargs) :
 	
 	if len(spbyfile) == 1 :
-		reduce_one_file(spbyfile[0], spbyfile)
+		reduce_one_file(spbyfile[0], spbyfile, cmdargs)
 		return spbyfile
 	
 	copy_spbyfile = spbyfile.copy()
@@ -289,10 +298,10 @@ def reduce_all_files(spbyfile) :
 		# check if desired output is obtained whithout the file
 		spbyfile.remove(iseqs)
 
-		if not check_output(spbyfile) :
+		if not check_output(spbyfile, cmdargs) :
 			# otherwise reduces the sequences of the file
 			spbyfile.append(iseqs)
-			reduce_one_file(iseqs, spbyfile)
+			reduce_one_file(iseqs, spbyfile, cmdargs)
 
 	return spbyfile
 
@@ -415,10 +424,10 @@ def rm_file(filename) :
 	p = Path(filename)
 	p.unlink()
 
-def make_fof(fofname) :
+def make_fof(fofname, infilesnames) :
 	try :
 		with open(fofname, 'x') as fof : # création exclusive
-			for i, filename in enumerate(INFILESNAMES) :
+			for i, filename in enumerate(infilesnames) :
 				if i != 0 :
 					fof.write("\n")
 				fof.write(filename)
@@ -430,7 +439,7 @@ def make_fof(fofname) :
 			truncate = input("Do you want to truncate " + fofname + " ? (y,n) ")
 			if truncate == 'y' : 
 				p.unlink()
-				make_fof(fofname)
+				make_fof(fofname, infilesnames)
 			else :
 				exit(0)
 		
@@ -439,16 +448,17 @@ def make_fof(fofname) :
 			raise
 
 
-def get_args() :
+def set_args() :
 	parser = argparse.ArgumentParser(prog="Genome Fuzzing")
 
-	# options that takes a value
+	# non positionnal arguments
 	parser.add_argument('-e', '--stderr', default=None)
 	parser.add_argument('-f', '--onefasta', action='store_true')
-	parser.add_argument('-o', '--stdout', default=None)
 	parser.add_argument('-r', '--returncode', default=None, type=int)
+	parser.add_argument('-o', '--outfilesnames', action='extend', nargs='+', type=str)
 	parser.add_argument('-v', '--verbose', action='store_true')
-	parser.add_argument('-w', '--workdir', default=os.getcwd())
+	parser.add_argument('-u', '--stdout', default=None)
+	#parser.add_argument('-w', '--workdir', default=os.getcwd())
 
 	# positionnal arguments
 	parser.add_argument('filename')
@@ -456,64 +466,63 @@ def get_args() :
 	
 	args = parser.parse_args()
 	if not (args.returncode or args.stdout or args.stderr) :
-		parser.error("No output requested, add -r or -e or -o.")
+		parser.error("No output requested, add -r or -e or -u.")
 	
 	return args
 
 
 if __name__=='__main__' :
 
-	# get the arguments
-	args = get_args()
+	# set the arguments
+	args = set_args()
 
 	# initialise the globals
-	DESIRED_OUTPUT = (args.returncode, args.stdout, args.stderr)
-	CMD = args.cmdline
+	desired_output = (args.returncode, args.stdout, args.stderr)
 
-	nofof = args.onefasta
-	if nofof : 
-		FOFNAME = "fof.txt"
-		INFILESNAMES = [args.filename]
-		make_fof(FOFNAME)
+	fofname = "fof.txt"
+	infilesnames = [args.filename]
+	if args.onefasta : 
+		make_fof(fofname, infilesnames)
 	else :
-		FOFNAME = args.filename
-		INFILESNAMES = fof_to_list(FOFNAME)
+		fofname = args.filename
+		infilesnames = fof_to_list(fofname)
 
-	WORKDIR = args.workdir if args.workdir[len(args.workdir)-1] == "/" else args.workdir + "/"
+	#WORKDIR = args.workdir if args.workdir[len(args.workdir)-1] == "/" else args.workdir + "/"
+	cmdargs = CmdArgs(args.cmdline, fofname, infilesnames, args.outfilesnames, desired_output)
 	# from here every global should be constant (except NB_PROCESS)
 
 	# copies the input files in temporary files, to not overwrite the temporary ones
-	copy_infiles(INFILESNAMES)
-	copy_fof(FOFNAME)
+	copy_infiles(cmdargs.infilesnames)
+	copy_fof(cmdargs.fofname)
 
 	if args.verbose :
-		s = "\n - Desired output : " + str(DESIRED_OUTPUT) + "\n"
-		s += " - Working directory : " + WORKDIR + "\n"
-		s += " - Fofname : " + FOFNAME + "\n"
-		s += " - Input files names : " + str(INFILESNAMES) + "\n"
-		s += " - Commande : " + CMD + "\n"
+		s = "\n - Desired output : " + str(cmdargs.desired_output) + "\n"
+		#s += " - Working directory : " + WORKDIR + "\n"
+		s += " - Fofname : " + cmdargs.fofname + "\n"
+		s += " - Input files names : " + str(cmdargs.infilesnames) + "\n"
+		s += " - Commande : " + cmdargs.subcmdline + "\n"
 		print(s)
 
 	# parse the sequences of each file
-	spbyfile = parsing_multiple_files(INFILESNAMES)
+	spbyfile = parsing_multiple_files(cmdargs.infilesnames)
 	
 	# process the data
-	spbyfile = reduce_all_files(spbyfile)
+	spbyfile = reduce_all_files(spbyfile, cmdargs)
 
 	# writes the reduced seqs in files with _result extension
-	sp_to_files(spbyfile, TMP_EXTENSION, "_result")
+	sp_to_files(spbyfile, cmdargs, TMP_EXTENSION, "_result")
 	
 	# rename _tmp files to their original name
-	rename_files(INFILESNAMES + [FOFNAME], TMP_EXTENSION, "")
+	rename_files(cmdargs.infilesnames + [cmdargs.fofname], TMP_EXTENSION, "")
 	
-	if nofof :
-		rm_file(FOFNAME)
-		p = Path(FOFNAME)
+	if args.onefasta :
+		rm_file(cmdargs.fofname)
+		p = Path(cmdargs.fofname)
 		rm_file(str(p.parent) + "/" + p.stem + "_result" + p.suffix)
 
 	if args.verbose :
 		print("Process number: " + str(NB_PROCESS))
-		files = INFILESNAMES if nofof else [FOFNAME] + INFILESNAMES
+		files = cmdargs.infilesnames if args.onefasta else [cmdargs.fofname] + cmdargs.infilesnames
 		print("\nResults : ")
 		print_files_debug(files, "_result")
 		print("\nDone.")
