@@ -24,13 +24,24 @@ class SpecieData :
 
 class CmdArgs :
 
-	def __init__(self, subcmdline, fofname, infilesnames, outfilesnames, desired_output) :
+	def __init__(self, subcmdline, infilename, nofof, outfilesnames, desired_output) :
 		self.subcmdline = subcmdline
-		self.fofname = fofname
-		self.infilesnames = infilesnames
+		self.infilename = infilename # the name of the fof or the only file of sequences
+		self.nofof = nofof
 		self.outfilesnames = outfilesnames
 		self.desired_output = desired_output
-		self.infilesnames = fof_to_list(self.fofname)
+		self.seqfilesnames = []
+	
+	def init_seqfilesnames(self) :
+		if nofof :
+			self.seqfilesnames = [self.infilename]
+		else :
+			self.seqfilesnames = fof_to_list(self.infilename)
+
+	def replace_infilename(self, new_infilename) :
+		s = self.subcmdline.split(sep=self.fofname)
+		# TO FINISH
+		
 	
 
 def printset(iseqs) :
@@ -110,44 +121,62 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	outputfile.close()
 
 
-# writes the content of the fof and the fasta files
+# get the filename of species of this set
+def get_iseqs_filename(iseqs) :
+	# TODO : mettre tmp[0].filename instead of pop+append
+	tmp_specie = iseqs.pop()
+	filename = tmp_specie.filename
+	iseqs.append(tmp_specie)
+	return filename
+
+
+# writes the content of the fof and call the function that writes their contents
 # reading from files with the input_extension, and writting in ones with the output_extension
 def sp_to_files(spbyfile, cmdargs, input_extension, output_extension) :
+
+	if cmdargs.nofof : # TODO : modulariser cette partie dans une autre fonction
+		filename = get_iseqs_filename(spbyfile[0])
+		p = Path(filename)
+		outputfilename = str(p.parent) + "/" + p.stem + output_extension + p.suffix
+		inputfilename = str(p.parent) + "/" + p.stem + input_extension + p.suffix
+	
+		# writes the file
+		if len(spbyfile[0]) != 0 :
+			iseqs_to_file(spbyfile[0], inputfilename, outputfilename)
+		
+		# truncate the file
+		else :
+			open(outputfilename, 'w').close()
+		
+		return None
+
+
 	p = Path(cmdargs.fofname)
 	fofname_extended = str(p.parent) + "/" + p.stem + output_extension + p.suffix
 	
 	try :
 		with open(fofname_extended, 'w') as fof :
 			
-			filestotruncate = cmdargs.infilesnames.copy()
-		
 			for (i, iseqs) in enumerate(spbyfile) :
 				
-				if len(iseqs) != 0 :
-					# récupérer le nom du fichier de ce set() grâce à l'une de ses espèces
-					tmp_specie = iseqs.pop()
-					filename = tmp_specie.filename
-					filestotruncate.remove(filename)
-					iseqs.append(tmp_specie)
-		
-					p = Path(filename)
-					outputfilename = str(p.parent) + "/" + p.stem + output_extension + p.suffix
-					inputfilename = str(p.parent) + "/" + p.stem + input_extension + p.suffix
+				filename = get_iseqs_filename(iseqs)
+				p = Path(filename)
+				outputfilename = str(p.parent) + "/" + p.stem + output_extension + p.suffix
+				inputfilename = str(p.parent) + "/" + p.stem + input_extension + p.suffix
 					
+				if len(iseqs) != 0 :
 					if i != 0 :
 						fof.write("\n")
 
-					# l'écrire dans le fof
+					# writes its name in the file of files
 					fof.write(outputfilename)
 		
-					# lancer l'écriture du fichier
+					# call the function that writes the content of the file
 					iseqs_to_file(iseqs, inputfilename, outputfilename)
+				
+				else :
+					open(outputfilename, 'w').close()
 					
-			for f in filestotruncate :
-				pt = Path(f)
-				ftruncate = str(pt.parent) + "/" + pt.stem + output_extension + pt.suffix
-				open(ftruncate, 'w').close()
-		
 	except IOError :
 		raise
 
@@ -394,12 +423,12 @@ def copy_file_with_extension(filename, extension) :
 
 
 # creates the temporary files as copies of input files
-def copy_infiles(filesnames) :
+def copy_files(filesnames) :
 	for filename in filesnames : 
 		copy_file_with_extension(filename, TMP_EXTENSION)
 
-def copy_fof(fofname) :
-	copy_file_with_extension(fofname, TMP_EXTENSION)	
+#def copy_fof(fofname) :
+#	copy_file_with_extension(fofname, TMP_EXTENSION)	
 
 
 # returns the list of filenames in the fof (file of files)
@@ -424,6 +453,7 @@ def rm_file(filename) :
 	p = Path(filename)
 	p.unlink()
 
+'''
 def make_fof(fofname, infilesnames) :
 	try :
 		with open(fofname, 'x') as fof : # création exclusive
@@ -446,7 +476,7 @@ def make_fof(fofname, infilesnames) :
 		else :
 			print(fofname + " directory already exists, unable to create it.")
 			raise
-
+'''
 
 def set_args() :
 	parser = argparse.ArgumentParser(prog="Genome Fuzzing")
@@ -473,38 +503,33 @@ def set_args() :
 
 if __name__=='__main__' :
 
-	# set the arguments
+	# set and get the arguments
 	args = set_args()
 
-	# initialise the globals
+	# get the arguments
 	desired_output = (args.returncode, args.stdout, args.stderr)
-
-	fofname = "fof.txt"
-	infilesnames = [args.filename]
-	if args.onefasta : 
-		make_fof(fofname, infilesnames)
-	else :
-		fofname = args.filename
-		infilesnames = fof_to_list(fofname)
+	infilename = args.filename
+	nofof = args.onefasta
 
 	#WORKDIR = args.workdir if args.workdir[len(args.workdir)-1] == "/" else args.workdir + "/"
-	cmdargs = CmdArgs(args.cmdline, fofname, infilesnames, args.outfilesnames, desired_output)
-	# from here every global should be constant (except NB_PROCESS)
+
+	cmdargs = CmdArgs(args.cmdline, infilename, nofof, args.outfilesnames, desired_output)
+	cmdargs.init_seqfilesnames()
 
 	# copies the input files in temporary files, to not overwrite the temporary ones
-	copy_infiles(cmdargs.infilesnames)
-	copy_fof(cmdargs.fofname)
+	allfiles = cmdargs.seqfilesnames if nofof else cmdargs.seqfilesnames + [cmdargs.infilename]
+	copy_files(allfiles)
 
 	if args.verbose :
 		s = "\n - Desired output : " + str(cmdargs.desired_output) + "\n"
 		#s += " - Working directory : " + WORKDIR + "\n"
-		s += " - Fofname : " + cmdargs.fofname + "\n"
-		s += " - Input files names : " + str(cmdargs.infilesnames) + "\n"
+		s += " - Fofname : " + cmdargs.infilename + "\n"
+		s += " - Input files names : " + str(cmdargs.seqfilesnames) + "\n"
 		s += " - Commande : " + cmdargs.subcmdline + "\n"
 		print(s)
 
 	# parse the sequences of each file
-	spbyfile = parsing_multiple_files(cmdargs.infilesnames)
+	spbyfile = parsing_multiple_files(cmdargs.seqfilesnames)
 	
 	# process the data
 	spbyfile = reduce_all_files(spbyfile, cmdargs)
@@ -513,16 +538,16 @@ if __name__=='__main__' :
 	sp_to_files(spbyfile, cmdargs, TMP_EXTENSION, "_result")
 	
 	# rename _tmp files to their original name
-	rename_files(cmdargs.infilesnames + [cmdargs.fofname], TMP_EXTENSION, "")
+	rename_files(allfiles, TMP_EXTENSION, "")
 	
-	if args.onefasta :
-		rm_file(cmdargs.fofname)
-		p = Path(cmdargs.fofname)
-		rm_file(str(p.parent) + "/" + p.stem + "_result" + p.suffix)
+	#if nofof :
+	#	rm_file(cmdargs.fofname)
+	#	p = Path(cmdargs.fofname)
+	#	rm_file(str(p.parent) + "/" + p.stem + "_result" + p.suffix)
 
 	if args.verbose :
 		print("Process number: " + str(NB_PROCESS))
-		files = cmdargs.infilesnames if args.onefasta else [cmdargs.fofname] + cmdargs.infilesnames
+		files = cmdargs.infilesnames if nofof else [cmdargs.fofname] + cmdargs.infilesnames
 		print("\nResults : ")
 		print_files_debug(files, "_result")
 		print("\nDone.")
