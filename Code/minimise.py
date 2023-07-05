@@ -1,5 +1,3 @@
-import os
-import os.path
 from pathlib import Path
 import subprocess
 import shutil
