@@ -509,7 +509,6 @@ if __name__=='__main__' :
 	
 	if args.verbose :
 		print("Process number: " + str(NB_PROCESS))
-		files = cmdargs.seqfilesnames if nofof else [cmdargs.fofname] + cmdargs.seqfilesnames
 		print("\nResults : ")
-		print_files_debug(files, "_result")
+		print_files_debug(allfiles, "_result")
 		print("\nDone.")
