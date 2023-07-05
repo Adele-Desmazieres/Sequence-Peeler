@@ -122,60 +122,75 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	outputfile.close()
 
 
-# get the filename of species of this set
+# returns the filenames with the input and the output extension
 def get_in_out_filename(filename, input_extension, output_extension) :
 	p = Path(filename)
 	inputfilename = str(p.parent) + "/" + p.stem + input_extension + p.suffix
 	outputfilename = str(p.parent) + "/" + p.stem + output_extension + p.suffix
 	return (inputfilename, outputfilename)
 
+def get_output_filename(filename, dirname) :
+	return dirname + "/" + Path(filename).name
 
 # writes the content of the fof and call the function that writes their contents
 # reading from files with the input_extension, and writting in ones with the output_extension
-def sp_to_files(spbyfile, cmdargs, input_extension, output_extension) :
+def sp_to_files(spbyfile, cmdargs, dirname) :
 
 	if cmdargs.nofof : 
 		iseqs = spbyfile[0]
 		if len(iseqs) != 0 :
-			inputfilename, outputfilename = get_in_out_filename(iseqs[0].filename, input_extension, output_extension)
+			inputfilename = iseqs[0].filename
+			outputfilename = get_output_filename(inputfilename, dirname)
 			iseqs_to_file(spbyfile[0], inputfilename, outputfilename)
 		
-		# truncate the file
-		else :
-			inputfilename, outputfilename = get_in_out_filename(cmdargs.infilename, input_extension, output_extension)
-			open(outputfilename, 'w').close()
+		# truncate the file -> not needed anymore because file absent from new directory
+		#else :
+		#	inputfilename, outputfilename = get_in_out_filename(cmdargs.infilename, input_extension, output_extension)
+		#	open(outputfilename, 'w').close()
 		
 		return None
 
-	files_to_truncate = cmdargs.get_all_files()
+	#files_to_truncate = cmdargs.get_all_files()
 	p = Path(cmdargs.infilename)
-	fofname_extended = str(p.parent) + "/" + p.stem + output_extension + p.suffix
+	outfofname = get_output_filename(cmdargs.infilename, dirname)
 	
 	try :
-		with open(fofname_extended, 'w') as fof :
+		with open(outfofname, 'w') as fof :
 			
 			for (i, iseqs) in enumerate(spbyfile) :
 				
 				if len(iseqs) != 0 :
 					
-					inputfilename, outputfilename = get_in_out_filename(iseqs[0].filename, input_extension, output_extension)
-					if i != 0 :
-						fof.write("\n")
+					#inputfilename, outputfilename = get_in_out_filename(iseqs[0].filename, input_extension, output_extension)
+					inputfilename = iseqs[0].filename
+					outputfilename = get_output_filename(inputfilename, dirname)
 
 					# writes its name in the file of files
-					fof.write(outputfilename)
+					if i != 0 :
+						fof.write("\n")
+					fof.write(Path(outputfilename).name)
 		
 					# call the function that writes the content of the file
 					iseqs_to_file(iseqs, inputfilename, outputfilename)
 
-					files_to_truncate.remove(iseqs[0].filename)
-				
-			for f in files_to_truncate :
-				inputfilename, outputfilename = get_in_out_filename(f, input_extension, output_extension)
-				open(outputfilename, 'w').close()
+	#				files_to_truncate.remove(iseqs[0].filename)
+	#			
+	#		for f in files_to_truncate :
+	#			inputfilename, outputfilename = get_in_out_filename(f, input_extension, output_extension)
+	#			open(outputfilename, 'w').close()
 					
 	except IOError :
 		raise
+
+
+def make_new_dir() :
+	i = 0
+	dirname = str(i)
+	while Path(dirname).exists() :
+		i += 1
+		dirname = str(i)
+	Path(dirname).mkdir()
+	return dirname
 
 
 # check that the execution of cmd with the sequences as input gives the desired output
@@ -186,7 +201,8 @@ def check_output(spbyfile, cmdargs, input_extension=TMP_EXTENSION, output_extens
 	#print_debug(spbyfile)
 	NB_PROCESS += 1
 
-	sp_to_files(spbyfile, cmdargs, input_extension, output_extension)
+	dirname = make_new_dir()
+	sp_to_files(spbyfile, cmdargs, dirname, input_extension, output_extension)
 	
 	output = subprocess.run(cmdargs.subcmdline, shell=True, capture_output=True)
 	dout = cmdargs.desired_output
@@ -484,7 +500,7 @@ if __name__=='__main__' :
 
 	# copies the input files in temporary files, to not overwrite the temporary ones
 	allfiles = cmdargs.get_all_files()
-	copy_files(allfiles)
+	#copy_files(allfiles)
 
 	if args.verbose :
 		s = "\n - Desired output : " + str(cmdargs.desired_output) + "\n"
