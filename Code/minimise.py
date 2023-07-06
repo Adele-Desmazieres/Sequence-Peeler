@@ -193,20 +193,33 @@ def make_new_dir() :
 	return dirname
 
 
+def replace_files(cmd, files_list) :
+	cmd_dir = cmd
+	for f in files_list :
+		f2 = Path(f).name
+		cmd_dir = cmd_dir.replace(f, f2)
+	return cmd_dir
+
+
 # check that the execution of cmd with the sequences as input gives the desired output
 # TODO : execute on the cluster
-def check_output(spbyfile, cmdargs, input_extension=TMP_EXTENSION, output_extension="") :
+def check_output(spbyfile, cmdargs) :
 	global NB_PROCESS
-	#print("subprocess " + str(NB_PROCESS))
-	#print_debug(spbyfile)
+	print("subprocess " + str(NB_PROCESS))
+	print_debug(spbyfile)
 	NB_PROCESS += 1
 
 	dirname = make_new_dir()
-	sp_to_files(spbyfile, cmdargs, dirname, input_extension, output_extension)
+	print("\"" + dirname + "\" directory created")
+	sp_to_files(spbyfile, cmdargs, dirname)
+	cmd_filesreplaced = replace_files(cmdargs.subcmdline, cmdargs.get_all_files() + cmdargs.outfilesnames)
 	
-	output = subprocess.run(cmdargs.subcmdline, shell=True, capture_output=True)
-	dout = cmdargs.desired_output
+	output = subprocess.run(cmd_filesreplaced, shell=True, capture_output=True, cwd=dirname)
 
+	shutil.rmtree(dirname)
+	print("\"" + dirname + "\" directory removed")
+
+	dout = cmdargs.desired_output
 	checkreturn = dout[0] == None or dout[0] == output.returncode
 	checkstdout = dout[1] == None or dout[1] in output.stdout.decode()
 	checkstderr = dout[2] == None or dout[2] in output.stderr.decode()
@@ -470,7 +483,7 @@ def set_args() :
 	parser.add_argument('-e', '--stderr', default=None)
 	parser.add_argument('-f', '--onefasta', action='store_true')
 	parser.add_argument('-r', '--returncode', default=None, type=int)
-	parser.add_argument('-o', '--outfilesnames', action='extend', nargs='+', type=str)
+	parser.add_argument('-o', '--outfilesnames', action='extend', nargs='+', type=str, default=[])
 	parser.add_argument('-v', '--verbose', action='store_true')
 	parser.add_argument('-u', '--stdout', default=None)
 
@@ -506,7 +519,7 @@ if __name__=='__main__' :
 		s = "\n - Desired output : " + str(cmdargs.desired_output) + "\n"
 		s += " - Fofname : " + cmdargs.infilename + "\n"
 		s += " - Input files names : " + str(cmdargs.seqfilesnames) + "\n"
-		s += " - Commande : " + cmdargs.subcmdline + "\n"
+		s += " - Command : " + cmdargs.subcmdline + "\n"
 		print(s)
 
 	# parse the sequences of each file
@@ -515,14 +528,22 @@ if __name__=='__main__' :
 	# process the data
 	spbyfile = reduce_all_files(spbyfile, cmdargs)
 
-	# writes the reduced seqs in files with _result extension
-	sp_to_files(spbyfile, cmdargs, TMP_EXTENSION, "_result")
+	# writes the reduced seqs in the Result directory
+	result = "Results"
+	dirname = result
+	i = 1
+	while Path(dirname).exists() :
+		dirname = result + str(i)
+		i += 1
+	#if not Path(dirname).is_dir() :
+	#	Path(dirname).mkdir()
+	sp_to_files(spbyfile, cmdargs, "Results")
 	
 	# rename _tmp files to their original name
 	rename_files(allfiles, TMP_EXTENSION, "")
 	
 	if args.verbose :
 		print("Process number: " + str(NB_PROCESS))
-		print("\nResults : ")
-		print_files_debug(allfiles, "_result")
+		#print("\nResults : ")
+		#print_files_debug(dirname) # TODO REECRIRE CETTE FONCTION
 		print("\nDone.")
