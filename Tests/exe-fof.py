@@ -30,7 +30,7 @@ def parsing(filename) :
 		return sequences
 
 	except IOError :
-		print("Fichier introuvable.")
+		print("Fichier", filename, "introuvable.")
 		exit(2)
 
 

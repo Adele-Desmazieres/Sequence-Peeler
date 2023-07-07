@@ -4,7 +4,7 @@ import shutil
 import argparse
 
 TMP_EXTENSION = "_tmp"
-NB_PROCESS = 1
+NB_PROCESS = 0
 
 class SpecieData :
 	
@@ -148,7 +148,6 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 		return None
 
 	files_to_truncate = cmdargs.get_all_files()
-	p = Path(cmdargs.infilename)
 	outfofname = get_output_filename(cmdargs.infilename, dirname)
 	
 	try :
@@ -195,16 +194,20 @@ def make_new_dir() :
 
 # check that the execution of cmd with the sequences as input gives the desired output
 # TODO : execute on the cluster
-def check_output(spbyfile, cmdargs, input_extension=TMP_EXTENSION, output_extension="") :
+def check_output(spbyfile, cmdargs) :
 	global NB_PROCESS
-	print("subprocess " + str(NB_PROCESS))
-	#print_debug(spbyfile)
 	NB_PROCESS += 1
 
 	dirname = make_new_dir()
 	sp_to_files(spbyfile, cmdargs, dirname)
 	cmd_replaced_files = replace_files(cmdargs.subcmdline, cmdargs.get_all_files(), dirname)
-	#print(cmd_replaced_files)
+	
+	print("subprocess " + str(NB_PROCESS))
+	print(cmd_replaced_files)
+	print_debug(spbyfile)
+	print_files_debug(dirname)
+
+	# TODO : ajouter cwd=dirname et modifier d'autres références aux fichiers pour que ca marche
 	
 	output = subprocess.run(cmd_replaced_files, shell=True, capture_output=True)
 	
@@ -215,7 +218,7 @@ def check_output(spbyfile, cmdargs, input_extension=TMP_EXTENSION, output_extens
 	checkstdout = dout[1] == None or dout[1] in output.stdout.decode()
 	checkstderr = dout[2] == None or dout[2] in output.stderr.decode()
 	r = (checkreturn and checkstdout and checkstderr)
-	#if r : print("subcmd error found")
+	if r : print("=== YES ===")
 	return r
 
 
@@ -528,7 +531,7 @@ if __name__=='__main__' :
 		i += 1
 	Path(resultdir).mkdir()
 	# writes the reduced seqs in files in a new directory
-	#print_debug(spbyfile)
+	print_debug(spbyfile)
 	#print("writing in", resultdir)
 	sp_to_files(spbyfile, cmdargs, resultdir)
 	
