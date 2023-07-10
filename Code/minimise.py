@@ -22,13 +22,14 @@ class SpecieData :
 
 class CmdArgs :
 
-	def __init__(self, subcmdline, infilename, nofof, outfilesnames, desired_output) :
+	def __init__(self, subcmdline, infilename, nofof, outfilesnames, desired_output, verbose) :
 		self.subcmdline = subcmdline
 		self.infilename = infilename # the name of the fof or the only file of sequences
 		self.nofof = nofof
 		self.outfilesnames = outfilesnames
 		self.desired_output = desired_output
 		self.seqfilesnames = []
+		self.verbose = verbose
 	
 	def init_seqfilesnames(self) :
 		if nofof :
@@ -177,7 +178,7 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 		raise
 
 
-def replace_files(cmd, files, dirname) :
+def replace_files(cmd, files) :
 	for f in files :
 		cmd = cmd.replace(f, Path(f).name)
 	return cmd
@@ -200,12 +201,13 @@ def check_output(spbyfile, cmdargs) :
 
 	dirname = make_new_dir()
 	sp_to_files(spbyfile, cmdargs, dirname)
-	cmd_replaced_files = replace_files(cmdargs.subcmdline, cmdargs.get_all_files(), dirname)
+	cmd_replaced_files = replace_files(cmdargs.subcmdline, cmdargs.get_all_files())
 	
-	print("subprocess " + str(NB_PROCESS))
-	#print(cmd_replaced_files)
-	#print_debug(spbyfile)
-	#print_files_debug(dirname)
+	if cmdargs.verbose :
+		print("subprocess " + str(NB_PROCESS))
+		#print(cmd_replaced_files)
+		print_debug(spbyfile)
+		#print_files_debug(dirname)
 
 	output = subprocess.run(cmd_replaced_files, shell=True, capture_output=True, cwd=dirname)
 	
@@ -500,14 +502,11 @@ if __name__=='__main__' :
 	infilename = args.filename
 	nofof = args.onefasta
 
-	cmdargs = CmdArgs(args.cmdline, infilename, nofof, args.outfilesnames, desired_output)
+	cmdargs = CmdArgs(args.cmdline, infilename, nofof, args.outfilesnames, desired_output, args.verbose)
 	cmdargs.init_seqfilesnames()
-
-	# copies the input files in temporary files, to not overwrite the temporary ones
 	allfiles = cmdargs.get_all_files()
-	#copy_files(allfiles)
 
-	if args.verbose :
+	if cmdargs.verbose :
 		s = "\n - Desired output : " + str(cmdargs.desired_output) + "\n"
 		s += " - Fofname : " + cmdargs.infilename + "\n"
 		s += " - Input files names : " + str(cmdargs.seqfilesnames) + "\n"
@@ -520,20 +519,17 @@ if __name__=='__main__' :
 	# process the data
 	spbyfile = reduce_all_files(spbyfile, cmdargs)
 	
-	tmpdir = "Results"
-	resultdir = tmpdir
-	i = 1
-	while Path(resultdir).exists() :
-		resultdir = tmpdir + str(i)
-		i += 1
+	resultdir = "Results" # TODO : delete the previous Results directory ? ask the user ? make a new one with a different name ?
+	#tmpdir = resultdir
+	#i = 1
+	#while Path(resultdir).exists() :
+	#	resultdir = tmpdir + str(i)
+	#	i += 1
+	shutil.rmtree(resultdir, ignore_errors=True)
 	Path(resultdir).mkdir()
-	# writes the reduced seqs in files in a new directory
-	#print_debug(spbyfile)
-	#print("writing in", resultdir)
-	sp_to_files(spbyfile, cmdargs, resultdir)
 	
-	# rename _tmp files to their original name
-	#rename_files(allfiles, TMP_EXTENSION, "")
+	# writes the reduced seqs in files in a new directory
+	sp_to_files(spbyfile, cmdargs, resultdir)
 	
 	if args.verbose :
 		print("Process number : " + str(NB_PROCESS))
