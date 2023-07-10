@@ -179,7 +179,7 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 
 def replace_files(cmd, files, dirname) :
 	for f in files :
-		cmd = cmd.replace(f, dirname + "/" + Path(f).name)
+		cmd = cmd.replace(f, Path(f).name)
 	return cmd
 
 def make_new_dir() :
@@ -203,13 +203,11 @@ def check_output(spbyfile, cmdargs) :
 	cmd_replaced_files = replace_files(cmdargs.subcmdline, cmdargs.get_all_files(), dirname)
 	
 	print("subprocess " + str(NB_PROCESS))
-	print(cmd_replaced_files)
-	print_debug(spbyfile)
-	print_files_debug(dirname)
+	#print(cmd_replaced_files)
+	#print_debug(spbyfile)
+	#print_files_debug(dirname)
 
-	# TODO : ajouter cwd=dirname et modifier d'autres références aux fichiers pour que ca marche
-	
-	output = subprocess.run(cmd_replaced_files, shell=True, capture_output=True)
+	output = subprocess.run(cmd_replaced_files, shell=True, capture_output=True, cwd=dirname)
 	
 	shutil.rmtree(dirname)
 
@@ -218,7 +216,6 @@ def check_output(spbyfile, cmdargs) :
 	checkstdout = dout[1] == None or dout[1] in output.stdout.decode()
 	checkstderr = dout[2] == None or dout[2] in output.stderr.decode()
 	r = (checkreturn and checkstdout and checkstderr)
-	if r : print("=== YES ===")
 	return r
 
 
@@ -531,7 +528,7 @@ if __name__=='__main__' :
 		i += 1
 	Path(resultdir).mkdir()
 	# writes the reduced seqs in files in a new directory
-	print_debug(spbyfile)
+	#print_debug(spbyfile)
 	#print("writing in", resultdir)
 	sp_to_files(spbyfile, cmdargs, resultdir)
 	
