@@ -4,7 +4,7 @@ import shutil
 import argparse
 
 TMP_EXTENSION = "_tmp"
-NB_PROCESS = 1
+NB_PROCESS = 0
 
 class SpecieData :
 	
@@ -22,13 +22,14 @@ class SpecieData :
 
 class CmdArgs :
 
-	def __init__(self, subcmdline, infilename, nofof, outfilesnames, desired_output) :
+	def __init__(self, subcmdline, infilename, nofof, outfilesnames, desired_output, verbose) :
 		self.subcmdline = subcmdline
 		self.infilename = infilename # the name of the fof or the only file of sequences
 		self.nofof = nofof
 		self.outfilesnames = outfilesnames
 		self.desired_output = desired_output
 		self.seqfilesnames = []
+		self.verbose = verbose
 	
 	def init_seqfilesnames(self) :
 		if nofof :
@@ -36,10 +37,6 @@ class CmdArgs :
 		else :
 			self.seqfilesnames = fof_to_list(self.infilename)
 
-	def replace_infilename(self, new_infilename) :
-		s = self.subcmdline.split(sep=self.fofname)
-		# TO FINISH
-	
 	def get_all_files(self) :
 		return [self.infilename] if self.nofof else self.seqfilesnames + [self.infilename]
 		
@@ -55,28 +52,30 @@ def print_debug(spbyfile) :
 		printset(iseqs)
 	print()
 
-def print_files_debug(files, extension) :
-	for filename in files :
+def print_files_debug(dirname) :
+	pdir = Path(dirname)
+	for filename in pdir.iterdir() :
 		p = Path(filename)
-		outputfilename = str(p.parent) + "/" + p.stem + extension + p.suffix
+		outputfilename = dirname + "/" + p.name
+		
 		print("\nIn file \"" + outputfilename + "\" :\n")
-
 		with open(outputfilename) as f :
 			print(f.read())
+		
 	print()
 
 
 ### code from https://stackoverflow.com/a/26209275
 def chunks(fd, buffer_size=4096):
-    chunk = fd.read(buffer_size)
-    while chunk:
-        yield chunk
-        chunk = fd.read(buffer_size)
+	chunk = fd.read(buffer_size)
+	while chunk:
+		yield chunk
+		chunk = fd.read(buffer_size)
 
 def chars(fd, buffersize=4096):
-    for chunk in chunks(fd, buffersize):
-        for char in chunk:
-            yield char
+	for chunk in chunks(fd, buffersize):
+		for char in chunk:
+			yield char
 ### end of code copy
 
 
@@ -143,15 +142,13 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 			outputfilename = get_output_filename(inputfilename, dirname)
 			iseqs_to_file(spbyfile[0], inputfilename, outputfilename)
 		
-		# truncate the file -> not needed anymore because file absent from new directory
-		#else :
-		#	inputfilename, outputfilename = get_in_out_filename(cmdargs.infilename, input_extension, output_extension)
-		#	open(outputfilename, 'w').close()
+		# makes the empty file
+		else :
+			open(get_output_filename(cmdargs.infilename, dirname), 'w').close()
 		
 		return None
 
-	#files_to_truncate = cmdargs.get_all_files()
-	p = Path(cmdargs.infilename)
+	files_to_truncate = cmdargs.get_all_files()
 	outfofname = get_output_filename(cmdargs.infilename, dirname)
 	
 	try :
@@ -161,7 +158,6 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 				
 				if len(iseqs) != 0 :
 					
-					#inputfilename, outputfilename = get_in_out_filename(iseqs[0].filename, input_extension, output_extension)
 					inputfilename = iseqs[0].filename
 					outputfilename = get_output_filename(inputfilename, dirname)
 
@@ -173,15 +169,19 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 					# call the function that writes the content of the file
 					iseqs_to_file(iseqs, inputfilename, outputfilename)
 
-	#				files_to_truncate.remove(iseqs[0].filename)
-	#			
-	#		for f in files_to_truncate :
-	#			inputfilename, outputfilename = get_in_out_filename(f, input_extension, output_extension)
-	#			open(outputfilename, 'w').close()
+					files_to_truncate.remove(iseqs[0].filename)
+				
+			for f in files_to_truncate :
+				open(get_output_filename(f, dirname), 'w').close()
 					
 	except IOError :
 		raise
 
+
+def replace_files(cmd, files) :
+	for f in files :
+		cmd = cmd.replace(f, Path(f).name)
+	return cmd
 
 def make_new_dir() :
 	i = 0
@@ -205,19 +205,21 @@ def replace_files(cmd, files_list) :
 # TODO : execute on the cluster
 def check_output(spbyfile, cmdargs) :
 	global NB_PROCESS
-	print("subprocess " + str(NB_PROCESS))
-	print_debug(spbyfile)
 	NB_PROCESS += 1
 
 	dirname = make_new_dir()
-	print("\"" + dirname + "\" directory created")
 	sp_to_files(spbyfile, cmdargs, dirname)
-	cmd_filesreplaced = replace_files(cmdargs.subcmdline, cmdargs.get_all_files() + cmdargs.outfilesnames)
+	cmd_replaced_files = replace_files(cmdargs.subcmdline, cmdargs.get_all_files())
 	
-	output = subprocess.run(cmd_filesreplaced, shell=True, capture_output=True, cwd=dirname)
+	if cmdargs.verbose :
+		print("subprocess " + str(NB_PROCESS))
+		#print(cmd_replaced_files)
+		print_debug(spbyfile)
+		#print_files_debug(dirname)
 
+	output = subprocess.run(cmd_replaced_files, shell=True, capture_output=True, cwd=dirname)
+	
 	shutil.rmtree(dirname)
-	print("\"" + dirname + "\" directory removed")
 
 	dout = cmdargs.desired_output
 	checkreturn = dout[0] == None or dout[0] == output.returncode
@@ -508,14 +510,11 @@ if __name__=='__main__' :
 	infilename = args.filename
 	nofof = args.onefasta
 
-	cmdargs = CmdArgs(args.cmdline, infilename, nofof, args.outfilesnames, desired_output)
+	cmdargs = CmdArgs(args.cmdline, infilename, nofof, args.outfilesnames, desired_output, args.verbose)
 	cmdargs.init_seqfilesnames()
-
-	# copies the input files in temporary files, to not overwrite the temporary ones
 	allfiles = cmdargs.get_all_files()
-	#copy_files(allfiles)
 
-	if args.verbose :
+	if cmdargs.verbose :
 		s = "\n - Desired output : " + str(cmdargs.desired_output) + "\n"
 		s += " - Fofname : " + cmdargs.infilename + "\n"
 		s += " - Input files names : " + str(cmdargs.seqfilesnames) + "\n"
@@ -527,23 +526,21 @@ if __name__=='__main__' :
 	
 	# process the data
 	spbyfile = reduce_all_files(spbyfile, cmdargs)
-
-	# writes the reduced seqs in the Result directory
-	result = "Results"
-	dirname = result
-	i = 1
-	while Path(dirname).exists() :
-		dirname = result + str(i)
-		i += 1
-	#if not Path(dirname).is_dir() :
-	#	Path(dirname).mkdir()
-	sp_to_files(spbyfile, cmdargs, "Results")
 	
-	# rename _tmp files to their original name
-	rename_files(allfiles, TMP_EXTENSION, "")
+	resultdir = "Results" # TODO : delete the previous Results directory ? ask the user ? make a new one with a different name ?
+	#tmpdir = resultdir
+	#i = 1
+	#while Path(resultdir).exists() :
+	#	resultdir = tmpdir + str(i)
+	#	i += 1
+	shutil.rmtree(resultdir, ignore_errors=True)
+	Path(resultdir).mkdir()
+	
+	# writes the reduced seqs in files in a new directory
+	sp_to_files(spbyfile, cmdargs, resultdir)
 	
 	if args.verbose :
-		print("Process number: " + str(NB_PROCESS))
-		#print("\nResults : ")
-		#print_files_debug(dirname) # TODO REECRIRE CETTE FONCTION
+		print("Process number : " + str(NB_PROCESS))
+		print("\n", resultdir, " : ", sep="")
+		print_files_debug(resultdir)
 		print("\nDone.")
