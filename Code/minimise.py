@@ -2,6 +2,8 @@ from pathlib import Path
 import subprocess
 import shutil
 import argparse
+import multiprocessing
+from multiprocessing import Pool
 
 TMP_EXTENSION = "_tmp"
 NB_PROCESS = 0
@@ -178,7 +180,7 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 		raise
 
 
-def replace_files(cmd, files) :
+def replace_path_in_cmd(cmd, files) :
 	for f in files :
 		cmd = cmd.replace(f, Path(f).name)
 	return cmd
@@ -186,13 +188,12 @@ def replace_files(cmd, files) :
 
 # check that the execution of cmd with the sequences as input gives the desired output
 def check_output(spbyfile, cmdargs, dirname) :
-	global NB_PROCESS
-	NB_PROCESS += 1
 
-	cmd_replaced_files = replace_files(cmdargs.subcmdline, cmdargs.get_all_files())
-		
+	cmd_replaced_files = replace_path_in_cmd(cmdargs.subcmdline, cmdargs.get_all_files())
+	
 	if cmdargs.verbose :
-		print("subprocess " + str(NB_PROCESS))
+		#print("subprocess " + str(NB_PROCESS))
+		print("subprocess " + str(multiprocessing.current_process().pid))
 		print(cmd_replaced_files)
 		print_debug(spbyfile)
 		#print_files_debug(dirname)
@@ -206,6 +207,11 @@ def check_output(spbyfile, cmdargs, dirname) :
 	checkstdout = dout[1] == None or dout[1] in output.stdout.decode()
 	checkstderr = dout[2] == None or dout[2] in output.stderr.decode()
 	r = (checkreturn and checkstdout and checkstderr)
+
+	if cmdargs.verbose :
+		#print("end subprocess " + str(NB_PROCESS))
+		print("end subprocess " + str(multiprocessing.current_process().pid))
+
 	return r
 
 
@@ -220,6 +226,8 @@ def make_new_dir() :
 
 
 def prepare_subprocess(spbyfile, cmdargs) :
+	global NB_PROCESS
+	NB_PROCESS += 1
 	dirname = make_new_dir()
 	sp_to_files(spbyfile, cmdargs, dirname)
 	return dirname
@@ -295,10 +303,17 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		sp.subseqs.remove(seq1)
 		sp.subseqs.remove(seq2)
 
-		# TODO : lancer ces trois process en parrallèle
-		case1 = check_output(spbyfile, cmdargs, dirname1)
-		case2 = check_output(spbyfile, cmdargs, dirname2)
-		case3 = check_output(spbyfile, cmdargs, dirname3)
+		dirnames = [dirname1, dirname2, dirname3]
+
+		# TODO : https://stackoverflow.com/questions/71192894/python-multiprocessing-terminate-other-processes-after-one-process-finished 
+		# prepare and launches the different processes
+		p = Pool(processes=3)
+		procargs = [(spbyfile, cmdargs, d) for d in dirnames]
+		data = p.starmap(check_output, procargs)
+		p.close()
+		case1 = data[0]
+		case2 = data[1]
+		case3 = data[2]
 		
 		# case where the target fragment is in the first half
 		if middle != end and case1 :
@@ -548,8 +563,9 @@ if __name__=='__main__' :
 	# writes the reduced seqs in files in a new directory
 	sp_to_files(spbyfile, cmdargs, resultdir)
 	
+	print("Process number : " + str(NB_PROCESS))
+	print_debug(spbyfile)
 	if args.verbose :
-		print("Process number : " + str(NB_PROCESS))
-		print("\n", resultdir, " : ", sep="")
-		print_files_debug(resultdir)
+		#print("\n", resultdir, " : ", sep="")
+		#print_files_debug(resultdir)
 		print("\nDone.")
