@@ -183,26 +183,14 @@ def replace_files(cmd, files) :
 		cmd = cmd.replace(f, Path(f).name)
 	return cmd
 
-def make_new_dir() :
-	i = 0
-	dirname = str(i)
-	while Path(dirname).exists() :
-		i += 1
-		dirname = str(i)
-	Path(dirname).mkdir()
-	return dirname
-
 
 # check that the execution of cmd with the sequences as input gives the desired output
-# TODO : execute on the cluster
-def check_output(spbyfile, cmdargs) :
+def check_output(spbyfile, cmdargs, dirname) :
 	global NB_PROCESS
 	NB_PROCESS += 1
 
-	dirname = make_new_dir()
-	sp_to_files(spbyfile, cmdargs, dirname)
 	cmd_replaced_files = replace_files(cmdargs.subcmdline, cmdargs.get_all_files())
-	
+		
 	if cmdargs.verbose :
 		print("subprocess " + str(NB_PROCESS))
 		print(cmd_replaced_files)
@@ -221,6 +209,22 @@ def check_output(spbyfile, cmdargs) :
 	return r
 
 
+def make_new_dir() :
+	i = 0
+	dirname = str(i)
+	while Path(dirname).exists() :
+		i += 1
+		dirname = str(i)
+	Path(dirname).mkdir()
+	return dirname
+
+
+def prepare_subprocess(spbyfile, cmdargs) :
+	dirname = make_new_dir()
+	sp_to_files(spbyfile, cmdargs, dirname)
+	return dirname
+
+
 # reduces the sequence, cutting first and last nucleotides
 # cutting in half successively with an iterative binary search
 # returns the new reduced sequence, WITHOUT ADDING IT TO THE SPECIE'S LIST OF SEQS
@@ -237,11 +241,12 @@ def strip_sequence(seq, sp, spbyfile, flag_begining, cmdargs) :
 		# get the most central quarter
 		seq1 = (imid, end) if flag_begining else (begin, imid)
 		sp.subseqs.append(seq1)
-		r = check_output(spbyfile, cmdargs)
+		dirname = prepare_subprocess(spbyfile, cmdargs)
+		testresult = check_output(spbyfile, cmdargs, dirname)
 		sp.subseqs.remove(seq1)
 
 		# if the cut maintain the output, we keep cutting toward the center of the sequence
-		if r :
+		if testresult :
 			if flag_begining :
 				imin = imid
 			else :
@@ -277,37 +282,45 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		seq1 = (begin, middle)
 		seq2 = (middle, end)
 
-		# TODO : paralléliser, préparer les fichiers de tests avec des noms différents
-		# préparer les processus qui vont être exécutés et les lancer en parallele
+		# prepare the files and directories needed to check if they pass the test
+		sp.subseqs.append(seq1)
+		dirname1 = prepare_subprocess(spbyfile, cmdargs)
+		sp.subseqs.remove(seq1)		
+
+		sp.subseqs.append(seq2)
+		dirname2 = prepare_subprocess(spbyfile, cmdargs)
+
+		sp.subseqs.append(seq1)
+		dirname3 = prepare_subprocess(spbyfile, cmdargs)
+		sp.subseqs.remove(seq1)
+		sp.subseqs.remove(seq2)
+
+		# TODO : lancer ces trois process en parrallèle
+		case1 = check_output(spbyfile, cmdargs, dirname1)
+		case2 = check_output(spbyfile, cmdargs, dirname2)
+		case3 = check_output(spbyfile, cmdargs, dirname3)
 		
 		# case where the target fragment is in the first half
-		sp.subseqs.append(seq1)
-		if middle != end and check_output(spbyfile, cmdargs) :
+		if middle != end and case1 :
+			sp.subseqs.append(seq1)		
 			tmpsubseqs.append(seq1)
 			continue
-		else :
-			sp.subseqs.remove(seq1)		
 		
 		# case where the target fragment is in the second half
-		sp.subseqs.append(seq2)
-		if middle != begin and check_output(spbyfile, cmdargs) :
+		if middle != begin and case2 :
+			sp.subseqs.append(seq2)		
 			tmpsubseqs.append(seq2)
 			continue
-		else :
-			sp.subseqs.remove(seq2)		
 		
 		# case where there are two co-factor sequences
 		# so we cut the seq in half and add them to the set to be reduced
 		# TODO : relancer le check_output pour trouver les co-factors qui ne sont pas de part et d'autre du milieu de la séquence
-		sp.subseqs.append(seq1)
-		sp.subseqs.append(seq2)
-		if middle != end and middle != begin and check_output(spbyfile, cmdargs) :
+		if middle != end and middle != begin and case3 :
+			sp.subseqs.append(seq1)
+			sp.subseqs.append(seq2)
 			tmpsubseqs.append(seq1)
 			tmpsubseqs.append(seq2)
 			continue
-		else :
-			sp.subseqs.remove(seq1)
-			sp.subseqs.remove(seq2)
 		
 		# case where the target sequence is on both sides of the cut
 		# so we strip first and last unnecessary nucleotids
@@ -326,7 +339,9 @@ def reduce_one_file(iseqs, spbyfile, cmdargs) :
 		# check if desired output is obtained whithout the sequence of the specie
 		iseqs.remove(sp)
 		
-		if not check_output(spbyfile, cmdargs) :
+		dirname = prepare_subprocess(spbyfile, cmdargs)
+		testresult = check_output(spbyfile, cmdargs, dirname)
+		if not testresult :
 			# otherwise reduces the sequence
 			iseqs.append(sp)
 			reduce_specie(sp, spbyfile, cmdargs)
@@ -346,7 +361,9 @@ def reduce_all_files(spbyfile, cmdargs) :
 		# check if desired output is obtained whithout the file
 		spbyfile.remove(iseqs)
 
-		if not check_output(spbyfile, cmdargs) :
+		dirname = prepare_subprocess(spbyfile, cmdargs)
+		testresult = check_output(spbyfile, cmdargs, dirname)
+		if not testresult :
 			# otherwise reduces the sequences of the file
 			spbyfile.append(iseqs)
 			reduce_one_file(iseqs, spbyfile, cmdargs)
