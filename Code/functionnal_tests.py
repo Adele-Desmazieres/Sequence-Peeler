@@ -2,57 +2,60 @@ import subprocess
 import filecmp
 from pathlib import Path
 
+#ABSOLUTE_PATH_TO_EXE = "/home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/"
+ABSOLUTE_PATH_TO_EXE = "/home/yoshihiro/Documents/Pasteur-Genome-Fuzzing/Tests/"
+
 
 IN_EXE_OUT = [ \
     ( \
         "../Tests/t0.fasta", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/e0.py ../Tests/t0.fasta\" -r 1 -f", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "e0.py ../Tests/t0.fasta\" -r 1 -f", \
         "../Tests/t0_e0.fasta"), \
     ( \
         "../Tests/t0.fasta", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/e1.py ../Tests/t0.fasta\" -r 1 -f", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "e1.py ../Tests/t0.fasta\" -r 1 -f", \
         "../Tests/t0_e1.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/e1.py ../Tests/t1.fasta\" -r 1 -f", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "e1.py ../Tests/t1.fasta\" -r 1 -f", \
         "../Tests/t1_e1.fasta"), \
     ( \
         "../Tests/t2.fasta", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/e1.py ../Tests/t2.fasta\" -r 1 -f", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "e1.py ../Tests/t2.fasta\" -r 1 -f", \
         "../Tests/t2_e1.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/e2.py ../Tests/t1.fasta\" -r 1 -f", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "e2.py ../Tests/t1.fasta\" -r 1 -f", \
         "../Tests/t1_e2.fasta"), \
     ( \
         "../Tests/t0.fasta", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/e3.py ../Tests/t0.fasta\" -r 1 -f", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "e3.py ../Tests/t0.fasta\" -r 1 -f", \
         "../Tests/t0_e3.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/e3.py ../Tests/t1.fasta\" -r 1 -f", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "e3.py ../Tests/t1.fasta\" -r 1 -f", \
         "../Tests/t1_e3.fasta"), \
     ( \
         "../Tests/t1.fasta", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/e4.py ../Tests/t1.fasta\" -r 1 -f", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "e4.py ../Tests/t1.fasta\" -r 1 -f", \
         "../Tests/t1_e4.fasta") \
 ]
 
 FOF_EXE_OUT = [ \
     ( \
         "../Tests/fof0.txt", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/exe-fof.py ../Tests/fof0.txt\" -r 1", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "exe-fof.py ../Tests/fof0.txt\" -r 1", \
         [("../Tests/fof0_expected.txt", "../Tests/fof0_result.txt")]), \
     ( \
         "../Tests/fof1.txt", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/exe-fof.py ../Tests/fof1.txt\" -r 1", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "exe-fof.py ../Tests/fof1.txt\" -r 1", \
         [("../Tests/fof1_expected.txt", "../Tests/fof1_result.txt"),
          ("../Tests/t3_fof1_expected.fasta", "../Tests/t3_result.fasta"), 
          ("../Tests/t4_fof1_expected.fasta", "../Tests/t4_result.fasta")
         ]), \
     ( \
         "../Tests/fof2.txt", \
-        "\"python3 /home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/exe-fof.py ../Tests/fof2.txt\" -r 1", \
+        "\"python3 " + ABSOLUTE_PATH_TO_EXE + "exe-fof.py ../Tests/fof2.txt\" -r 1", \
         [("../Tests/fof2_expected.txt", "../Tests/fof2_result.txt"),
          ("../Tests/t5_fof2_expected.fasta", "../Tests/t5_result.fasta"), 
          ("../Tests/t1_fof2_expected.fasta", "../Tests/t1_result.fasta")

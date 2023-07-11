@@ -193,14 +193,6 @@ def make_new_dir() :
 	return dirname
 
 
-def replace_files(cmd, files_list) :
-	cmd_dir = cmd
-	for f in files_list :
-		f2 = Path(f).name
-		cmd_dir = cmd_dir.replace(f, f2)
-	return cmd_dir
-
-
 # check that the execution of cmd with the sequences as input gives the desired output
 # TODO : execute on the cluster
 def check_output(spbyfile, cmdargs) :
@@ -213,7 +205,7 @@ def check_output(spbyfile, cmdargs) :
 	
 	if cmdargs.verbose :
 		print("subprocess " + str(NB_PROCESS))
-		#print(cmd_replaced_files)
+		print(cmd_replaced_files)
 		print_debug(spbyfile)
 		#print_files_debug(dirname)
 
