@@ -187,7 +187,7 @@ def replace_path_in_cmd(cmd, files) :
 
 
 # check that the execution of cmd with the sequences as input gives the desired output
-def check_output(spbyfile, cmdargs, dirname) :
+def check_output(spbyfile, cmdargs, dirname, processnum=0, return_codes=dict(), run=None) :
 
 	cmd_replaced_files = replace_path_in_cmd(cmdargs.subcmdline, cmdargs.get_all_files())
 	
@@ -198,14 +198,22 @@ def check_output(spbyfile, cmdargs, dirname) :
 		print_debug(spbyfile)
 		#print_files_debug(dirname)
 
-	output = subprocess.run(cmd_replaced_files, shell=True, capture_output=True, cwd=dirname)
+	p = subprocess.Popen(
+		cmd_replaced_files, 
+		shell=True, 
+		cwd=dirname, 
+		stdout=subprocess.DEVNULL, 
+		stderr=subprocess.STDOUT)
+	stdout, stderr = p.communicate()
+	preturncode = p.returncode
+	# TODO : interrompre subprocess dès que : not run.is_set()
 	
 	shutil.rmtree(dirname)
 
 	dout = cmdargs.desired_output
-	checkreturn = dout[0] == None or dout[0] == output.returncode
-	checkstdout = dout[1] == None or dout[1] in output.stdout.decode()
-	checkstderr = dout[2] == None or dout[2] in output.stderr.decode()
+	checkreturn = dout[0] == None or dout[0] == preturncode
+	checkstdout = dout[1] == None or dout[1] in stdout.decode()
+	checkstderr = dout[2] == None or dout[2] in stderr.decode()
 	r = (checkreturn and checkstdout and checkstderr)
 
 	if cmdargs.verbose :
@@ -304,8 +312,7 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		sp.subseqs.remove(seq2)
 
 		dirnames = [dirname1, dirname2, dirname3]
-
-		# TODO : https://stackoverflow.com/questions/71192894/python-multiprocessing-terminate-other-processes-after-one-process-finished 
+		
 		# prepare and launches the different processes
 		p = Pool(processes=3)
 		procargs = [(spbyfile, cmdargs, d) for d in dirnames]
@@ -314,6 +321,53 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		case1 = data[0]
 		case2 = data[1]
 		case3 = data[2]
+		
+		'''
+		# tried with ChatGPT...
+		pool = Pool(processes=3)
+		processes = []
+		#procargs = [(spbyfile, cmdargs, d) for d in dirnames]
+		for dirname in dirnames :
+			process = pool.apply_async(check_output, args=(spbyfile, cmdargs, dirname))
+			processes.append(process)
+			#data = pool.starmap(check_output, procargs)
+		
+		# wait for any subprocess to finish
+		finished_process = multiprocessing.connection.wait(
+			processes, return_when=multiprocessing.connection.WAIT_ANY
+		)
+		
+		# terminate the remaining subprocesses
+		for process in processes:
+			if process != finished_process:
+				process.terminate()
+		
+		pool.close()
+		pool.join()		
+		'''
+		
+		'''
+		# code from https://stackoverflow.com/a/71193726
+		processes = []
+		manager = multiprocessing.Manager()
+		return_codes = manager.dict()
+		run = manager.Event()
+		run.set()  # we should keep running
+		for i in range(3):
+			process = multiprocessing.Process(
+				target=check_output, args=(spbyfile, cmdargs, dirnames[i], i, return_codes, run)
+			)
+			processes.append(process)
+			process.start()
+
+		for process in processes:
+			process.join()
+
+		print(return_codes.values())
+		case1 = return_codes[0]
+		case2 = return_codes[1]
+		case3 = return_codes[2]
+		'''
 		
 		# case where the target fragment is in the first half
 		if middle != end and case1 :
