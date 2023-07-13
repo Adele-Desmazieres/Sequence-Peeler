@@ -1,9 +1,11 @@
+from time import sleep
 from pathlib import Path
-import subprocess
-import shutil
-import argparse
-import multiprocessing
+from subprocess import Popen
+from subprocess import PIPE
+from shutil import rmtree
+from shutil import copy as shutilcopy
 from multiprocessing import Pool
+import argparse
 
 TMP_EXTENSION = "_tmp"
 NB_PROCESS = 0
@@ -32,6 +34,7 @@ class CmdArgs :
 		self.desired_output = desired_output
 		self.seqfilesnames = []
 		self.verbose = verbose
+		self.subcmdline_replaced = self.replace_path_in_cmd(self.get_all_files() + self.outfilesnames)
 	
 	def init_seqfilesnames(self) :
 		if nofof :
@@ -42,7 +45,12 @@ class CmdArgs :
 	def get_all_files(self) :
 		return [self.infilename] if self.nofof else self.seqfilesnames + [self.infilename]
 		
-	
+	def replace_path_in_cmd(self, files) :
+		cmd = self.subcmdline
+		for f in files :
+			cmd = cmd.replace(f, Path(f).name)
+		return cmd
+
 
 def printset(iseqs) :
 	for sp in list(iseqs) :
@@ -123,15 +131,9 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	outputfile.close()
 
 
-# returns the filenames with the input and the output extension
-def get_in_out_filename(filename, input_extension, output_extension) :
-	p = Path(filename)
-	inputfilename = str(p.parent) + "/" + p.stem + input_extension + p.suffix
-	outputfilename = str(p.parent) + "/" + p.stem + output_extension + p.suffix
-	return (inputfilename, outputfilename)
-
 def get_output_filename(filename, dirname) :
 	return dirname + "/" + Path(filename).name
+
 
 # writes the content of the fof and call the function that writes their contents
 # reading from files with the input_extension, and writting in ones with the output_extension
@@ -180,47 +182,76 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 		raise
 
 
-def replace_path_in_cmd(cmd, files) :
-	for f in files :
-		cmd = cmd.replace(f, Path(f).name)
-	return cmd
+def compare_output(acutal_output, desired_output) :
+	rcode, stdout, stderr = acutal_output
+	rcode2, stdout2, stderr2 = desired_output
 
-
-# check that the execution of cmd with the sequences as input gives the desired output
-def check_output(spbyfile, cmdargs, dirname, processnum=0, return_codes=dict(), run=None) :
-
-	cmd_replaced_files = replace_path_in_cmd(cmdargs.subcmdline, cmdargs.get_all_files())
-	
-	if cmdargs.verbose :
-		#print("subprocess " + str(NB_PROCESS))
-		print("subprocess " + str(multiprocessing.current_process().pid))
-		print(cmd_replaced_files)
-		print_debug(spbyfile)
-		#print_files_debug(dirname)
-
-	p = subprocess.Popen(
-		cmd_replaced_files, 
-		shell=True, 
-		cwd=dirname, 
-		stdout=subprocess.DEVNULL, 
-		stderr=subprocess.STDOUT)
-	stdout, stderr = p.communicate()
-	preturncode = p.returncode
-	# TODO : interrompre subprocess dès que : not run.is_set()
-	
-	shutil.rmtree(dirname)
-
-	dout = cmdargs.desired_output
-	checkreturn = dout[0] == None or dout[0] == preturncode
-	checkstdout = dout[1] == None or dout[1] in stdout.decode()
-	checkstderr = dout[2] == None or dout[2] in stderr.decode()
-	r = (checkreturn and checkstdout and checkstderr)
-
-	if cmdargs.verbose :
-		#print("end subprocess " + str(NB_PROCESS))
-		print("end subprocess " + str(multiprocessing.current_process().pid))
-
+	checkreturn = rcode2 is None or rcode2 == rcode
+	checkstdout = stdout2 is None or stdout2 in stdout.decode()
+	checkstderr = stderr2 is None or stderr2 in stderr.decode()
+	r = checkreturn and checkstdout and checkstderr
 	return r
+
+
+# launches and return the list of processes running in the console, from a list of commands
+def trigger_programs(cmdline, dirnamelist):
+	processes = []
+
+	for dirname in dirnamelist:
+		#print("Cmd running in:", dirname)
+		p = Popen(cmdline, shell=True, cwd=dirname, stdout=PIPE, stderr=PIPE)
+		processes.append(p)
+		#sleep(0.5) # launches process at different times
+
+	return processes
+
+
+def wait_processes(processes, desired_output):
+	firstproc = None
+
+	# wait until the last process terminates
+	while len(processes) > 0 : #and firstproc is None :
+
+		# check for terminated process
+		for p in processes:
+			if p.poll() is not None: # one of the process finished
+				
+				#print(f"Process terminated on code {p.returncode}")
+				#for line in p.stdout:
+				#	print(line)
+				
+				# TODO : prioritize keeping first half and last half before keeping both
+				# with desired output
+				if compare_output((p.returncode, p.stdout, p.stderr), desired_output) : 
+					firstproc = p
+					for ptokill in processes :
+						ptokill.kill()
+
+				processes.remove(p)
+				# finalize the termination of the process
+				p.communicate()
+				#print("Process joined\n")
+				break
+
+		sleep(.1)
+	
+	return firstproc
+
+
+# returns the index of the dirname that caused the first desired output when running commands
+# returns -1 if none of them returned the desired output
+def trigger_and_wait_processes(cmdargs, dirnamelist) :
+	processes = trigger_programs(cmdargs.subcmdline_replaced, dirnamelist)
+	firstproc = wait_processes(processes.copy(), cmdargs.desired_output)
+
+	if firstproc is None :
+		return -1
+	
+	for i in range(len(processes)) :
+		if firstproc is processes[i] :
+			#print_files_debug(dirnamelist[i])
+			return i
+	return -1
 
 
 def make_new_dir() :
@@ -258,11 +289,13 @@ def strip_sequence(seq, sp, spbyfile, flag_begining, cmdargs) :
 		seq1 = (imid, end) if flag_begining else (begin, imid)
 		sp.subseqs.append(seq1)
 		dirname = prepare_subprocess(spbyfile, cmdargs)
-		testresult = check_output(spbyfile, cmdargs, dirname)
+		#testresult = check_output(spbyfile, cmdargs, dirname)
+		dirindex = trigger_and_wait_processes(cmdargs, [dirname])
+		rmtree(dirname)
 		sp.subseqs.remove(seq1)
 
 		# if the cut maintain the output, we keep cutting toward the center of the sequence
-		if testresult :
+		if dirindex == 0 :
 			if flag_begining :
 				imin = imid
 			else :
@@ -312,79 +345,31 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		sp.subseqs.remove(seq2)
 
 		dirnames = [dirname1, dirname2, dirname3]
-		
-		# prepare and launches the different processes
-		p = Pool(processes=3)
-		procargs = [(spbyfile, cmdargs, d) for d in dirnames]
-		data = p.starmap(check_output, procargs)
-		p.close()
-		case1 = data[0]
-		case2 = data[1]
-		case3 = data[2]
-		
-		'''
-		# tried with ChatGPT...
-		pool = Pool(processes=3)
-		processes = []
-		#procargs = [(spbyfile, cmdargs, d) for d in dirnames]
+		dirindex = trigger_and_wait_processes(cmdargs, dirnames)
 		for dirname in dirnames :
-			process = pool.apply_async(check_output, args=(spbyfile, cmdargs, dirname))
-			processes.append(process)
-			#data = pool.starmap(check_output, procargs)
+			rmtree(dirname)
 		
-		# wait for any subprocess to finish
-		finished_process = multiprocessing.connection.wait(
-			processes, return_when=multiprocessing.connection.WAIT_ANY
-		)
-		
-		# terminate the remaining subprocesses
-		for process in processes:
-			if process != finished_process:
-				process.terminate()
-		
-		pool.close()
-		pool.join()		
-		'''
-		
-		'''
-		# code from https://stackoverflow.com/a/71193726
-		processes = []
-		manager = multiprocessing.Manager()
-		return_codes = manager.dict()
-		run = manager.Event()
-		run.set()  # we should keep running
-		for i in range(3):
-			process = multiprocessing.Process(
-				target=check_output, args=(spbyfile, cmdargs, dirnames[i], i, return_codes, run)
-			)
-			processes.append(process)
-			process.start()
 
-		for process in processes:
-			process.join()
-
-		print(return_codes.values())
-		case1 = return_codes[0]
-		case2 = return_codes[1]
-		case3 = return_codes[2]
-		'''
-		
+		# TODO : utiliser des elif au lieu des continue ?
 		# case where the target fragment is in the first half
-		if middle != end and case1 :
-			sp.subseqs.append(seq1)		
+		if middle != end and dirindex == 0 :
+			print("case 1")
+			sp.subseqs.append(seq1)
 			tmpsubseqs.append(seq1)
 			continue
 		
 		# case where the target fragment is in the second half
-		if middle != begin and case2 :
-			sp.subseqs.append(seq2)		
+		if middle != begin and dirindex == 1 :
+			print("case 2")
+			sp.subseqs.append(seq2)
 			tmpsubseqs.append(seq2)
 			continue
 		
 		# case where there are two co-factor sequences
 		# so we cut the seq in half and add them to the set to be reduced
 		# TODO : relancer le check_output pour trouver les co-factors qui ne sont pas de part et d'autre du milieu de la séquence
-		if middle != end and middle != begin and case3 :
+		if middle != end and middle != begin and dirindex == 2 :
+			print("case 3")
 			sp.subseqs.append(seq1)
 			sp.subseqs.append(seq2)
 			tmpsubseqs.append(seq1)
@@ -393,6 +378,7 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		
 		# case where the target sequence is on both sides of the cut
 		# so we strip first and last unnecessary nucleotids
+		print("case 4")
 		seq = strip_sequence(seq, sp, spbyfile, True, cmdargs)
 		seq = strip_sequence(seq, sp, spbyfile, False, cmdargs)
 		sp.subseqs.append(seq)
@@ -409,8 +395,11 @@ def reduce_one_file(iseqs, spbyfile, cmdargs) :
 		iseqs.remove(sp)
 		
 		dirname = prepare_subprocess(spbyfile, cmdargs)
-		testresult = check_output(spbyfile, cmdargs, dirname)
-		if not testresult :
+		#testresult = check_output(spbyfile, cmdargs, dirname)
+		dirindex = trigger_and_wait_processes(cmdargs, [dirname])
+		rmtree(dirname)
+
+		if dirindex == -1 :
 			# otherwise reduces the sequence
 			iseqs.append(sp)
 			reduce_specie(sp, spbyfile, cmdargs)
@@ -431,8 +420,11 @@ def reduce_all_files(spbyfile, cmdargs) :
 		spbyfile.remove(iseqs)
 
 		dirname = prepare_subprocess(spbyfile, cmdargs)
-		testresult = check_output(spbyfile, cmdargs, dirname)
-		if not testresult :
+		#testresult = check_output(spbyfile, cmdargs, dirname)
+		dirindex = trigger_and_wait_processes(cmdargs, [dirname])
+		rmtree(dirname)
+
+		if dirindex == -1 :
 			# otherwise reduces the sequences of the file
 			spbyfile.append(iseqs)
 			reduce_one_file(iseqs, spbyfile, cmdargs)
@@ -510,7 +502,7 @@ def copy_file_with_extension(filename, extension) :
 
 	try :
 		with open(tmp_fname, 'x') : # exclusive creation
-			shutil.copy(filename, tmp_fname)
+			shutilcopy(filename, tmp_fname)
 
 	except OSError :
 
@@ -518,7 +510,7 @@ def copy_file_with_extension(filename, extension) :
 			print(tmp_fname + " file already exists, unable to create it.")
 			truncate = input("Do you want to truncate " + tmp_fname + " ? (y,n) ")
 			if truncate == 'y' : 
-				shutil.copy(filename, tmp_fname)
+				shutilcopy(filename, tmp_fname)
 			else :
 				exit(0)
 		
@@ -605,13 +597,8 @@ if __name__=='__main__' :
 	# process the data
 	spbyfile = reduce_all_files(spbyfile, cmdargs)
 	
-	resultdir = "Results" # TODO : delete the previous Results directory ? ask the user ? make a new one with a different name ?
-	#tmpdir = resultdir
-	#i = 1
-	#while Path(resultdir).exists() :
-	#	resultdir = tmpdir + str(i)
-	#	i += 1
-	shutil.rmtree(resultdir, ignore_errors=True)
+	resultdir = "Results" # TODO : update README to tell that Results will be overwritten
+	rmtree(resultdir, ignore_errors=True)
 	Path(resultdir).mkdir()
 	
 	# writes the reduced seqs in files in a new directory

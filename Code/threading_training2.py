@@ -1,7 +1,10 @@
 import subprocess
 import multiprocessing
+import os
 
+assert os.uname == 'posix', "Fonctionn eseulement sur Linux"
 
+'''
 def run_subprocess(cmd, i, return_codes):
 	print("begin", str(i)) 
 	return_codes[i] = -2
@@ -79,6 +82,24 @@ def main():
 	print(first_process)
 	for k,v in return_codes.items() :
 		print("process", k, "state:", v)
+'''
+
+subprocesses = []
+subprocesses.append(subprocess.Popen(['/usr/bin/sleep', '2']))
+subprocesses.append(subprocess.Popen(['/usr/bin/sleep', '1']))
+subprocesses.append(subprocess.Popen(['/usr/bin/sleep', '3']))
+subprocesses = {sp.id:sp for sp in subprocesses}
+
+
+while subprocesses :
+
+	pid, status = os.waitpid(-1)
+	del subprocess[pid]
+
+	if status :
+		pass
+
+
 
 if __name__ == "__main__":
 	main()
