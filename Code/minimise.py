@@ -289,7 +289,6 @@ def strip_sequence(seq, sp, spbyfile, flag_begining, cmdargs) :
 		seq1 = (imid, end) if flag_begining else (begin, imid)
 		sp.subseqs.append(seq1)
 		dirname = prepare_subprocess(spbyfile, cmdargs)
-		#testresult = check_output(spbyfile, cmdargs, dirname)
 		dirindex = trigger_and_wait_processes(cmdargs, [dirname])
 		rmtree(dirname)
 		sp.subseqs.remove(seq1)
@@ -395,7 +394,6 @@ def reduce_one_file(iseqs, spbyfile, cmdargs) :
 		iseqs.remove(sp)
 		
 		dirname = prepare_subprocess(spbyfile, cmdargs)
-		#testresult = check_output(spbyfile, cmdargs, dirname)
 		dirindex = trigger_and_wait_processes(cmdargs, [dirname])
 		rmtree(dirname)
 
@@ -420,7 +418,6 @@ def reduce_all_files(spbyfile, cmdargs) :
 		spbyfile.remove(iseqs)
 
 		dirname = prepare_subprocess(spbyfile, cmdargs)
-		#testresult = check_output(spbyfile, cmdargs, dirname)
 		dirindex = trigger_and_wait_processes(cmdargs, [dirname])
 		rmtree(dirname)
 

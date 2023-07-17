@@ -4,7 +4,12 @@
 
 ## Description
 
-This is a bioinformatic tool that founds the minimal input of fasta files for a specified command line returning a specified output. It can find one or many fragments of sequences that causes an error or any other output. This allows the user to automatically isolate the problematic nucleotides instead of searching by hand. 
+This is a bioinformatic tool that founds the minimal input of fasta files for a specified command line giving a specified output. It can find one or many fragments of sequences that cause an error or any other output. This allows the user to automatically isolate the problematic nucleotides instead of searching by hand. 
+
+You have a commande line that does prolonged operations on a fasta file, and returns something. This program will run the command multiple times on reduced versions of the fasta file, to isolate the sub sequences that give the specified output. 
+
+The resulting files will be created in a "Result" directory, removing any previous one in the working directory. 
+
 
 ## Installation
 
@@ -85,7 +90,6 @@ $ python3 Code/minimise.py
     -f
     -w Tests
 ```
-
 
 ## Author
 
