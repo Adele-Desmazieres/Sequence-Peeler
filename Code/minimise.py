@@ -193,20 +193,23 @@ def compare_output(acutal_output, desired_output) :
 	return r
 
 
-# launches and return the list of processes running in the console, from a list of commands
-def trigger_programs(cmdline, dirnamelist):
-	processes = []
+# launches the processes in the console, from a command and a list of directories
+# returns the dictionnary of process(Popen) : dirname(String)
+def trigger_processes(cmdline, dirnamelist):
+	dirnamedict = dict()
 
 	for dirname in dirnamelist:
 		#print("Cmd running in:", dirname)
 		p = Popen(cmdline, shell=True, cwd=dirname, stdout=PIPE, stderr=PIPE)
-		processes.append(p)
-		#sleep(0.5) # launches process at different times
+		dirnamedict[p] = dirname
+		sleep(0.1) # launches process at different times
 
-	return processes
+	return dirnamedict
 
 
-def wait_processes(processes, desired_output):
+def wait_processes(desired_output, dirnamedict):
+	processes = list(dirnamedict.keys())
+	#print("processes : ", processes)
 	firstproc = None
 
 	# wait until the last process terminates
@@ -221,16 +224,15 @@ def wait_processes(processes, desired_output):
 				#	print(line)
 				
 				# TODO : prioritize keeping first half and last half before keeping both
-				# with desired output
+				# if desired output
 				if compare_output((p.returncode, p.stdout, p.stderr), desired_output) : 
 					firstproc = p
 					for ptokill in processes :
 						ptokill.kill()
 
-				processes.remove(p)
 				# finalize the termination of the process
+				processes.remove(p)
 				p.communicate()
-				#print("Process joined\n")
 				break
 
 		sleep(.1)
@@ -241,18 +243,17 @@ def wait_processes(processes, desired_output):
 # returns the index of the dirname that caused the first desired output when running commands
 # returns -1 if none of them returned the desired output
 def trigger_and_wait_processes(cmdargs, dirnamelist) :
-	processes = trigger_programs(cmdargs.subcmdline_replaced, dirnamelist)
-	firstproc = wait_processes(processes.copy(), cmdargs.desired_output)
+	#print(dirnamelist)
+	dirnamedict = trigger_processes(cmdargs.subcmdline_replaced, dirnamelist) # creates dirnamedict of process:dirname
+	#print("proc dict : ", dirnamedict)
+	firstproc = wait_processes(cmdargs.desired_output, dirnamedict.copy())
+	#print("first process : ", firstproc)
 
 	if firstproc is None :
-		return -1
+		return None
+	else :
+		return dirnamedict.get(firstproc)
 	
-	for i in range(len(processes)) :
-		if firstproc is processes[i] :
-			#print_files_debug(dirnamelist[i])
-			return i
-	return -1
-
 
 def make_new_dir() :
 	i = 0
@@ -264,7 +265,7 @@ def make_new_dir() :
 	return dirname
 
 
-def prepare_subprocess(spbyfile, cmdargs) :
+def prepare_dir(spbyfile, cmdargs) :
 	global NB_PROCESS
 	NB_PROCESS += 1
 	dirname = make_new_dir()
@@ -288,13 +289,13 @@ def strip_sequence(seq, sp, spbyfile, flag_begining, cmdargs) :
 		# get the most central quarter
 		seq1 = (imid, end) if flag_begining else (begin, imid)
 		sp.subseqs.append(seq1)
-		dirname = prepare_subprocess(spbyfile, cmdargs)
-		dirindex = trigger_and_wait_processes(cmdargs, [dirname])
+		dirname = prepare_dir(spbyfile, cmdargs)
+		firstdirname = trigger_and_wait_processes(cmdargs, [dirname])
 		rmtree(dirname)
 		sp.subseqs.remove(seq1)
 
 		# if the cut maintain the output, we keep cutting toward the center of the sequence
-		if dirindex == 0 :
+		if firstdirname is not None and firstdirname == dirname :
 			if flag_begining :
 				imin = imid
 			else :
@@ -332,33 +333,40 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 
 		# prepare the files and directories needed to check if they pass the test
 		sp.subseqs.append(seq1)
-		dirname1 = prepare_subprocess(spbyfile, cmdargs)
+		dirname1 = prepare_dir(spbyfile, cmdargs)
 		sp.subseqs.remove(seq1)		
 
 		sp.subseqs.append(seq2)
-		dirname2 = prepare_subprocess(spbyfile, cmdargs)
+		dirname2 = prepare_dir(spbyfile, cmdargs)
 
 		sp.subseqs.append(seq1)
-		dirname3 = prepare_subprocess(spbyfile, cmdargs)
+		dirname3 = prepare_dir(spbyfile, cmdargs)
 		sp.subseqs.remove(seq1)
 		sp.subseqs.remove(seq2)
 
-		dirnames = [dirname1, dirname2, dirname3]
-		dirindex = trigger_and_wait_processes(cmdargs, dirnames)
-		for dirname in dirnames :
-			rmtree(dirname)
+		dirnames = list()
+		if middle != end :
+			dirnames.append(dirname1)
+		if middle != begin :
+			dirnames.append(dirname2)
+		if middle != end and middle != begin :
+			dirnames.append(dirname3)
 		
+		firstdirname = trigger_and_wait_processes(cmdargs, dirnames)
+		rmtree(dirname1)
+		rmtree(dirname2)
+		rmtree(dirname3)
 
 		# TODO : utiliser des elif au lieu des continue ?
 		# case where the target fragment is in the first half
-		if middle != end and dirindex == 0 :
+		if firstdirname is not None and firstdirname == dirname1 :
 			print("case 1")
 			sp.subseqs.append(seq1)
 			tmpsubseqs.append(seq1)
 			continue
 		
 		# case where the target fragment is in the second half
-		if middle != begin and dirindex == 1 :
+		if firstdirname is not None and firstdirname == dirname2 :
 			print("case 2")
 			sp.subseqs.append(seq2)
 			tmpsubseqs.append(seq2)
@@ -367,7 +375,7 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		# case where there are two co-factor sequences
 		# so we cut the seq in half and add them to the set to be reduced
 		# TODO : relancer le check_output pour trouver les co-factors qui ne sont pas de part et d'autre du milieu de la séquence
-		if middle != end and middle != begin and dirindex == 2 :
+		if firstdirname is not None and firstdirname == dirname3 :
 			print("case 3")
 			sp.subseqs.append(seq1)
 			sp.subseqs.append(seq2)
@@ -393,11 +401,11 @@ def reduce_one_file(iseqs, spbyfile, cmdargs) :
 		# check if desired output is obtained whithout the sequence of the specie
 		iseqs.remove(sp)
 		
-		dirname = prepare_subprocess(spbyfile, cmdargs)
-		dirindex = trigger_and_wait_processes(cmdargs, [dirname])
+		dirname = prepare_dir(spbyfile, cmdargs)
+		firstdirname = trigger_and_wait_processes(cmdargs, [dirname])
 		rmtree(dirname)
 
-		if dirindex == -1 :
+		if firstdirname is None :
 			# otherwise reduces the sequence
 			iseqs.append(sp)
 			reduce_specie(sp, spbyfile, cmdargs)
@@ -417,11 +425,11 @@ def reduce_all_files(spbyfile, cmdargs) :
 		# check if desired output is obtained whithout the file
 		spbyfile.remove(iseqs)
 
-		dirname = prepare_subprocess(spbyfile, cmdargs)
-		dirindex = trigger_and_wait_processes(cmdargs, [dirname])
+		dirname = prepare_dir(spbyfile, cmdargs)
+		firstdirname = trigger_and_wait_processes(cmdargs, [dirname])
 		rmtree(dirname)
 
-		if dirindex == -1 :
+		if firstdirname is None :
 			# otherwise reduces the sequences of the file
 			spbyfile.append(iseqs)
 			reduce_one_file(iseqs, spbyfile, cmdargs)
@@ -594,7 +602,7 @@ if __name__=='__main__' :
 	# process the data
 	spbyfile = reduce_all_files(spbyfile, cmdargs)
 	
-	resultdir = "Results" # TODO : update README to tell that Results will be overwritten
+	resultdir = "Results"
 	rmtree(resultdir, ignore_errors=True)
 	Path(resultdir).mkdir()
 	
