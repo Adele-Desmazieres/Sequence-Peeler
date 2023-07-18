@@ -52,6 +52,13 @@ class CmdArgs :
 		return cmd
 
 
+class PopenExtended(Popen) :
+
+	def __init__(self, args, bufsize=-1, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=True, shell=False, cwd=None, env=None, universal_newlines=None, startupinfo=None, creationflags=0, restore_signals=True, start_new_session=False, pass_fds=(), *, group=None, extra_groups=None, user=None, umask=-1, encoding=None, errors=None, text=None, pipesize=- 1, process_group=None, prioritised=True) :
+		self.prioritised = prioritised
+		super().__init__(args=args, bufsize=bufsize, executable=executable, stdin=stdin, stdout=stdout, stderr=stderr, preexec_fn=preexec_fn, close_fds=close_fds, shell=shell, cwd=cwd, env=env, universal_newlines=universal_newlines, startupinfo=startupinfo, creationflags=creationflags, restore_signals=restore_signals, start_new_session=start_new_session, pass_fds=pass_fds, group=group, extra_groups=extra_groups, user=user, umask=umask, encoding=encoding, errors=errors, text=text, pipesize=pipesize, process_group=process_group)
+
+
 def printset(iseqs) :
 	for sp in list(iseqs) :
 		print(sp)
@@ -200,9 +207,9 @@ def trigger_processes(cmdline, dirnamelist):
 
 	for dirname in dirnamelist:
 		#print("Cmd running in:", dirname)
-		p = Popen(cmdline, shell=True, cwd=dirname, stdout=PIPE, stderr=PIPE)
+		p = PopenExtended(cmdline, shell=True, cwd=dirname, stdout=PIPE, stderr=PIPE, prioritised=True)
 		dirnamedict[p] = dirname
-		sleep(0.1) # launches process at different times
+		#sleep(0.1) # launches process at different times
 
 	return dirnamedict
 
@@ -211,6 +218,7 @@ def wait_processes(desired_output, dirnamedict):
 	processes = list(dirnamedict.keys())
 	#print("processes : ", processes)
 	firstproc = None
+	tmpproc = None
 
 	# wait until the last process terminates
 	while len(processes) > 0 : #and firstproc is None :
@@ -225,19 +233,24 @@ def wait_processes(desired_output, dirnamedict):
 				
 				# TODO : prioritize keeping first half and last half before keeping both
 				# if desired output
-				if compare_output((p.returncode, p.stdout, p.stderr), desired_output) : 
-					firstproc = p
-					for ptokill in processes :
-						ptokill.kill()
+				if compare_output((p.returncode, p.stdout, p.stderr), desired_output) :
+
+					if not p.prioritised :
+						tmpproc = p
+					
+					else :
+						firstproc = p
+						for ptokill in processes :
+							ptokill.kill()
 
 				# finalize the termination of the process
 				processes.remove(p)
 				p.communicate()
 				break
 
-		sleep(.1)
+		sleep(.001)
 	
-	return firstproc
+	return firstproc if firstproc is not None else tmpproc
 
 
 # returns the index of the dirname that caused the first desired output when running commands
@@ -351,6 +364,7 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 			dirnames.append(dirname2)
 		if middle != end and middle != begin :
 			dirnames.append(dirname3)
+		print("nombre de proc simultannés : ", len(dirnames))
 		
 		firstdirname = trigger_and_wait_processes(cmdargs, dirnames)
 		rmtree(dirname1)
@@ -388,6 +402,7 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		print("case 4")
 		seq = strip_sequence(seq, sp, spbyfile, True, cmdargs)
 		seq = strip_sequence(seq, sp, spbyfile, False, cmdargs)
+		#if seq[0] != seq[1] :
 		sp.subseqs.append(seq)
 	
 	return None
