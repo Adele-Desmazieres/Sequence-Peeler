@@ -1,9 +1,10 @@
 import subprocess
 import filecmp
+import sys
 from pathlib import Path
 
-#ABSOLUTE_PATH_TO_EXE = "/home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/"
-ABSOLUTE_PATH_TO_EXE = "/home/yoshihiro/Documents/Pasteur-Genome-Fuzzing/Tests/"
+ABSOLUTE_PATH_TO_EXE = "/home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/"
+#ABSOLUTE_PATH_TO_EXE = "/home/yoshihiro/Documents/Pasteur-Genome-Fuzzing/Tests/"
 
 
 IN_EXE_OUT = [ \
@@ -74,9 +75,12 @@ class TestCmdData :
         self.input_file = input_file # string
         self.cmd = cmd # string
         self.comparison_files = comparison_files # list of couples of string ("expected.fasta", "result.fasta")
-
+    
+    def buildcmd(self, cmdbegin) :
+        return cmdbegin + " " + self.input_file + " " + self.cmd
+    
     def run(self, cmdbegin) :
-        cmdline = cmdbegin + " " + self.input_file + " " + self.cmd
+        cmdline = self.buildcmd(cmdbegin)
         print(cmdline)
         subprocess.run(cmdline, shell=True)
 
@@ -134,7 +138,25 @@ def test_fasta(cmdbegin) :
         return False
 
 
+def printing_cmd(cmdbegin) :
+    for (input, exe, expectedoutput) in IN_EXE_OUT :
+        cmdline = cmdbegin + " " + input + " " + exe
+        print(cmdline)
+        print()
+    
+    for (input, exe, expectedoutput) in FOF_EXE_OUT :
+        t = TestCmdData(input, exe, expectedoutput)
+        print(t.buildcmd(cmdbegin))
+        print()
+
+
+
 if __name__=='__main__' :
     cmdbegin = "python3 minimise.py"
+    if len(sys.argv) >= 2 :
+        if sys.argv[1] == "fake" :
+            printing_cmd(cmdbegin)
+            exit(0)
+            
     test_fasta(cmdbegin)
     test_fof(cmdbegin)
