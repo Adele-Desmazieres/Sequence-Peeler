@@ -54,9 +54,9 @@ class CmdArgs :
 
 class PopenExtended(Popen) :
 
-	def __init__(self, args, bufsize=-1, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=True, shell=False, cwd=None, env=None, universal_newlines=None, startupinfo=None, creationflags=0, restore_signals=True, start_new_session=False, pass_fds=(), *, group=None, extra_groups=None, user=None, umask=-1, encoding=None, errors=None, text=None, pipesize=- 1, process_group=None, prioritised=True) :
+	def __init__(self, args, bufsize=-1, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=True, shell=False, cwd=None, env=None, universal_newlines=None, startupinfo=None, creationflags=0, restore_signals=True, start_new_session=False, pass_fds=(), *, encoding=None, errors=None, text=None, prioritised=True) :
 		self.prioritised = prioritised
-		super().__init__(args=args, bufsize=bufsize, executable=executable, stdin=stdin, stdout=stdout, stderr=stderr, preexec_fn=preexec_fn, close_fds=close_fds, shell=shell, cwd=cwd, env=env, universal_newlines=universal_newlines, startupinfo=startupinfo, creationflags=creationflags, restore_signals=restore_signals, start_new_session=start_new_session, pass_fds=pass_fds, group=group, extra_groups=extra_groups, user=user, umask=umask, encoding=encoding, errors=errors, text=text, pipesize=pipesize, process_group=process_group)
+		super().__init__(args=args, bufsize=bufsize, executable=executable, stdin=stdin, stdout=stdout, stderr=stderr, preexec_fn=preexec_fn, close_fds=close_fds, shell=shell, cwd=cwd, env=env, universal_newlines=universal_newlines, startupinfo=startupinfo, creationflags=creationflags, restore_signals=restore_signals, start_new_session=start_new_session, pass_fds=pass_fds, encoding=encoding, errors=errors, text=text)
 
 
 def printset(iseqs) :
@@ -202,12 +202,13 @@ def compare_output(acutal_output, desired_output) :
 
 # launches the processes in the console, from a command and a list of directories
 # returns the dictionnary of process(Popen) : dirname(String)
-def trigger_processes(cmdline, dirnamelist):
+def trigger_processes(cmdline, dirnamelist, priorities):
 	dirnamedict = dict()
 
-	for dirname in dirnamelist:
-		#print("Cmd running in:", dirname)
-		p = PopenExtended(cmdline, shell=True, cwd=dirname, stdout=PIPE, stderr=PIPE, prioritised=True)
+	for i in range(len(dirnamelist)):
+		dirname = dirnamelist[i]
+		print("Process running in:", dirname)
+		p = PopenExtended(cmdline, shell=True, cwd=dirname, stdout=PIPE, stderr=PIPE, prioritised=priorities[i])
 		dirnamedict[p] = dirname
 		#sleep(0.1) # launches process at different times
 
@@ -255,9 +256,11 @@ def wait_processes(desired_output, dirnamedict):
 
 # returns the index of the dirname that caused the first desired output when running commands
 # returns -1 if none of them returned the desired output
-def trigger_and_wait_processes(cmdargs, dirnamelist) :
+def trigger_and_wait_processes(cmdargs, dirnamelist, priorities=None) :
 	#print(dirnamelist)
-	dirnamedict = trigger_processes(cmdargs.subcmdline_replaced, dirnamelist) # creates dirnamedict of process:dirname
+	if priorities is None :
+		priorities = [True for x in dirnamelist]
+	dirnamedict = trigger_processes(cmdargs.subcmdline_replaced, dirnamelist, priorities) # creates dirnamedict of process:dirname
 	#print("proc dict : ", dirnamedict)
 	firstproc = wait_processes(cmdargs.desired_output, dirnamedict.copy())
 	#print("first process : ", firstproc)
@@ -358,15 +361,20 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		sp.subseqs.remove(seq2)
 
 		dirnames = list()
+		priorities = list()
 		if middle != end :
 			dirnames.append(dirname1)
+			priorities.append(True)
 		if middle != begin :
 			dirnames.append(dirname2)
+			priorities.append(True)
 		if middle != end and middle != begin :
 			dirnames.append(dirname3)
-		print("nombre de proc simultannés : ", len(dirnames))
+			priorities.append(False)
 		
-		firstdirname = trigger_and_wait_processes(cmdargs, dirnames)
+		#print("nombre de proc simultannés : ", len(dirnames))
+		
+		firstdirname = trigger_and_wait_processes(cmdargs, dirnames, priorities)
 		rmtree(dirname1)
 		rmtree(dirname2)
 		rmtree(dirname3)
@@ -374,14 +382,14 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		# TODO : utiliser des elif au lieu des continue ?
 		# case where the target fragment is in the first half
 		if firstdirname is not None and firstdirname == dirname1 :
-			print("case 1")
+			#print("case 1")
 			sp.subseqs.append(seq1)
 			tmpsubseqs.append(seq1)
 			continue
 		
 		# case where the target fragment is in the second half
 		if firstdirname is not None and firstdirname == dirname2 :
-			print("case 2")
+			#print("case 2")
 			sp.subseqs.append(seq2)
 			tmpsubseqs.append(seq2)
 			continue
@@ -390,7 +398,7 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		# so we cut the seq in half and add them to the set to be reduced
 		# TODO : relancer le check_output pour trouver les co-factors qui ne sont pas de part et d'autre du milieu de la séquence
 		if firstdirname is not None and firstdirname == dirname3 :
-			print("case 3")
+			#print("case 3")
 			sp.subseqs.append(seq1)
 			sp.subseqs.append(seq2)
 			tmpsubseqs.append(seq1)
@@ -399,10 +407,9 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 		
 		# case where the target sequence is on both sides of the cut
 		# so we strip first and last unnecessary nucleotids
-		print("case 4")
+		#print("case 4")
 		seq = strip_sequence(seq, sp, spbyfile, True, cmdargs)
 		seq = strip_sequence(seq, sp, spbyfile, False, cmdargs)
-		#if seq[0] != seq[1] :
 		sp.subseqs.append(seq)
 	
 	return None
