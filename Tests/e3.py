@@ -2,7 +2,7 @@ import sys
 
 
 def matching(sequences) :
-    s = set(["ATC", "ACT", "TAC", "CAT", "CTA", "TCA"])
+    s = set(["ATC", "ACT", "TAC", "TCA"])
     for specie,seq in sequences.items() :
         for i in range(len(seq) - 2) :
             if seq[i:i+3] in s :
