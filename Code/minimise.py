@@ -50,6 +50,22 @@ class CmdArgs :
 		for f in files :
 			cmd = cmd.replace(f, Path(f).name)
 		return cmd
+	
+	# returns the dict of filepath:renamedfile
+	# where renamedfile is the renamed file to assure that we don't copy 2 files with the same name in the same directory
+	def make_tmpfilenames(self, files) :
+		fileregister = dict()
+		for f in files :
+			i = 0
+			p = Path(f)
+			tmpname = p.name
+			while tmpname in dict.keys() :
+				tmpname = p.name + str(i)
+				i += 1
+			fileregister[f] = tmpname
+		return fileregister
+			
+			
 
 
 class PopenExtended(Popen) :
