@@ -1,2 +1,2 @@
-../Tests/t3_result.fasta
-../Tests/t4_result.fasta
+t3.fasta
+t4.fasta

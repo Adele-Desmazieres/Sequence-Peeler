@@ -34,7 +34,11 @@ class CmdArgs :
 		self.desired_output = desired_output
 		self.seqfilesnames = []
 		self.verbose = verbose
+		self.init_seqfilesnames()
+		self.fileregister = self.make_fileregister(self.get_all_files() + self.outfilesnames)
 		self.subcmdline_replaced = self.replace_path_in_cmd(self.get_all_files() + self.outfilesnames)
+		print(self.fileregister)
+		print(self.subcmdline_replaced)
 	
 	def init_seqfilesnames(self) :
 		if nofof :
@@ -48,19 +52,19 @@ class CmdArgs :
 	def replace_path_in_cmd(self, files) :
 		cmd = self.subcmdline
 		for f in files :
-			cmd = cmd.replace(f, Path(f).name)
+			cmd = cmd.replace(f, self.fileregister[f])
 		return cmd
 	
 	# returns the dict of filepath:renamedfile
 	# where renamedfile is the renamed file to assure that we don't copy 2 files with the same name in the same directory
-	def make_tmpfilenames(self, files) :
+	def make_fileregister(self, files) :
 		fileregister = dict()
 		for f in files :
 			i = 0
 			p = Path(f)
 			tmpname = p.name
-			while tmpname in dict.keys() :
-				tmpname = p.name + str(i)
+			while tmpname in fileregister.values() :
+				tmpname = p.stem + "_" + str(i) + p.suffix
 				i += 1
 			fileregister[f] = tmpname
 		return fileregister
@@ -154,8 +158,9 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 	outputfile.close()
 
 
-def get_output_filename(filename, dirname) :
-	return dirname + "/" + Path(filename).name
+def get_output_filename(filename, cmdargs, dirname) :
+	name = cmdargs.fileregister.get(filename)
+	return dirname + "/" + name
 
 
 # writes the content of the fof and call the function that writes their contents
@@ -166,17 +171,17 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 		iseqs = spbyfile[0]
 		if len(iseqs) != 0 :
 			inputfilename = iseqs[0].filename
-			outputfilename = get_output_filename(inputfilename, dirname)
+			outputfilename = get_output_filename(inputfilename, cmdargs, dirname)
 			iseqs_to_file(spbyfile[0], inputfilename, outputfilename)
 		
 		# makes the empty file
 		else :
-			open(get_output_filename(cmdargs.infilename, dirname), 'w').close()
+			open(get_output_filename(cmdargs.infilename, cmdargs, dirname), 'w').close()
 		
 		return None
 
 	files_to_truncate = cmdargs.get_all_files()
-	outfofname = get_output_filename(cmdargs.infilename, dirname)
+	outfofname = get_output_filename(cmdargs.infilename, cmdargs, dirname)
 	
 	try :
 		with open(outfofname, 'w') as fof :
@@ -186,7 +191,7 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 				if len(iseqs) != 0 :
 					
 					inputfilename = iseqs[0].filename
-					outputfilename = get_output_filename(inputfilename, dirname)
+					outputfilename = get_output_filename(inputfilename, cmdargs, dirname)
 
 					# writes its name in the file of files
 					if i != 0 :
@@ -199,7 +204,7 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 					files_to_truncate.remove(iseqs[0].filename)
 				
 			for f in files_to_truncate :
-				open(get_output_filename(f, dirname), 'w').close()
+				open(get_output_filename(f, cmdargs, dirname), 'w').close()
 					
 	except IOError :
 		raise
@@ -624,7 +629,7 @@ if __name__=='__main__' :
 	nofof = args.onefasta
 
 	cmdargs = CmdArgs(args.cmdline, infilename, nofof, args.outfilesnames, desired_output, args.verbose)
-	cmdargs.init_seqfilesnames()
+	#cmdargs.init_seqfilesnames()
 	allfiles = cmdargs.get_all_files()
 
 	if cmdargs.verbose :

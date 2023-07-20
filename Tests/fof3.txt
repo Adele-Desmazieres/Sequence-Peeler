@@ -1,0 +1,2 @@
+../Tests/t4.fasta
+../Tests/Toto/t4.fasta

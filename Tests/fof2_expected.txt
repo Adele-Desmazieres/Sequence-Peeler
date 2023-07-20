@@ -1,1 +1,1 @@
-../Tests/t1_result.fasta
+t1.fasta
