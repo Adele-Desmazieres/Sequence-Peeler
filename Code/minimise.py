@@ -1,3 +1,5 @@
+#!/bin/python3
+
 from time import sleep
 from pathlib import Path
 from subprocess import Popen
@@ -226,7 +228,7 @@ def trigger_processes(cmdline, dirnamelist, priorities):
 
 	for i in range(len(dirnamelist)):
 		dirname = dirnamelist[i]
-		print("Process running in:", dirname)
+		#print("Process running in:", dirname)
 		p = PopenExtended(cmdline, shell=True, cwd=dirname, stdout=PIPE, stderr=PIPE, prioritised=priorities[i])
 		dirnamedict[p] = dirname
 		#sleep(0.1) # launches process at different times
@@ -449,7 +451,9 @@ def reduce_one_file(iseqs, spbyfile, cmdargs) :
 		if firstdirname is None :
 			# otherwise reduces the sequence
 			iseqs.append(sp)
-			reduce_specie(sp, spbyfile, cmdargs)
+
+	for sp in iseqs :
+		reduce_specie(sp, spbyfile, cmdargs)
 		
 	return iseqs
 
@@ -473,7 +477,9 @@ def reduce_all_files(spbyfile, cmdargs) :
 		if firstdirname is None :
 			# otherwise reduces the sequences of the file
 			spbyfile.append(iseqs)
-			reduce_one_file(iseqs, spbyfile, cmdargs)
+
+	for iseqs in spbyfile :
+		reduce_one_file(iseqs, spbyfile, cmdargs)
 
 	return spbyfile
 
