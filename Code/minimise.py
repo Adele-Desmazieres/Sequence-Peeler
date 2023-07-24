@@ -135,6 +135,8 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 			
 			# counts the number of line breaks in the seq before the first nucl of the subseq
 			nb_line_breaks = 0
+			
+			''' # this is the part that slows down the program
 			ic = firstcharseq
 			for c in chars(inputfile) :
 				if ic < begin :
@@ -143,14 +145,17 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 					ic += 1
 				else :
 					break
-				
+			'''
+			tmp = inputfile.read(begin)
+			nb_line_breaks = sum([1 for c in tmp if c == '\n'])
+			
 			# writes the header
 			firstnuclsubseq = begin - firstcharseq + 1 - nb_line_breaks
 			header = sp.header + ", position " + str(firstnuclsubseq)
 			outputfile.write(">" + header + "\n")
 			
 			# read the subseq from the input and writes it in the output
-			inputfile.seek(begin)
+			#inputfile.seek(begin)
 			actual_subseq = inputfile.read(end-begin)
 			outputfile.write(actual_subseq)
 	
