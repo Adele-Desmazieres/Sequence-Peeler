@@ -9,8 +9,8 @@ from shutil import copy as shutilcopy
 from multiprocessing import Pool
 import argparse
 
-TMP_EXTENSION = "_tmp"
 NB_PROCESS = 0
+CHUNK_SIZE = 200_000_000 # char number, string of about 0.8 Go
 
 class SpecieData :
 	
@@ -135,26 +135,15 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 			
 			# counts the number of line breaks in the seq before the first nucl of the subseq
 			nb_line_breaks = 0
-			
-			'''
-			# this is the part that slows down the program
 			ic = firstcharseq
-			print("chars = \"")
-			for c in chars(inputfile) :
-				if ic < begin :
-					print(c, end='')
-					if c == '\n' : 
-						nb_line_breaks += 1
-					ic += 1
+			while ic < begin :
+				if ic + CHUNK_SIZE < begin :
+					nb_line_breaks += inputfile.read(CHUNK_SIZE).count('\n')
+					ic += CHUNK_SIZE
 				else :
-					break
-			print("\"")
-			'''
+					nb_line_breaks += inputfile.read(begin-ic).count('\n')
+					ic = begin
 			
-			#inputfile.seek(firstcharseq)
-			tmp = inputfile.read(begin-firstcharseq)
-			nb_line_breaks = tmp.count('\n')
-			#print("tmp = \"", tmp, "\"", sep='')
 			#print("line breaks =", nb_line_breaks)
 			
 			# writes the header
@@ -164,8 +153,19 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 			
 			# read the subseq from the input and writes it in the output
 			inputfile.seek(begin)
-			actual_subseq = inputfile.read(end-begin)
-			outputfile.write(actual_subseq)
+			ic = begin
+			while ic < end :
+				if ic + CHUNK_SIZE < end :
+					actual_subseq = inputfile.read(CHUNK_SIZE)
+					outputfile.write(actual_subseq)
+					ic += CHUNK_SIZE
+				else :
+					actual_subseq = inputfile.read(end-begin)
+					outputfile.write(actual_subseq)
+					ic = end
+
+			#actual_subseq = inputfile.read(end-begin)
+			#outputfile.write(actual_subseq)
 	
 	inputfile.close()
 	outputfile.close()
@@ -583,12 +583,6 @@ def copy_file_with_extension(filename, extension) :
 		else :
 			print(tmp_fname + " directory already exists, unable to create it.")
 			raise
-
-
-# creates the temporary files as copies of input files
-def copy_files(filesnames) :
-	for filename in filesnames : 
-		copy_file_with_extension(filename, TMP_EXTENSION)
 
 
 # returns the list of filenames in the fof (file of files)
