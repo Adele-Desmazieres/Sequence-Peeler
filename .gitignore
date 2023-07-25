@@ -1,3 +1,4 @@
+.gitignore
 **/*memo*
 **/*tmp*
 **/*result*
@@ -8,3 +9,4 @@ Results*
 Data/*.fasta
 **/schema_dossiers.pdf
 **/schema_dossiers.odg
+Divers/concurent
