@@ -136,18 +136,26 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 			# counts the number of line breaks in the seq before the first nucl of the subseq
 			nb_line_breaks = 0
 			
-			''' # this is the part that slows down the program
+			'''
+			# this is the part that slows down the program
 			ic = firstcharseq
+			print("chars = \"")
 			for c in chars(inputfile) :
 				if ic < begin :
+					print(c, end='')
 					if c == '\n' : 
 						nb_line_breaks += 1
 					ic += 1
 				else :
 					break
+			print("\"")
 			'''
-			tmp = inputfile.read(begin)
-			nb_line_breaks = sum([1 for c in tmp if c == '\n'])
+			
+			#inputfile.seek(firstcharseq)
+			tmp = inputfile.read(begin-firstcharseq)
+			nb_line_breaks = tmp.count('\n')
+			#print("tmp = \"", tmp, "\"", sep='')
+			#print("line breaks =", nb_line_breaks)
 			
 			# writes the header
 			firstnuclsubseq = begin - firstcharseq + 1 - nb_line_breaks
@@ -155,7 +163,7 @@ def iseqs_to_file(iseqs, inputfilename, outputfilename) :
 			outputfile.write(">" + header + "\n")
 			
 			# read the subseq from the input and writes it in the output
-			#inputfile.seek(begin)
+			inputfile.seek(begin)
 			actual_subseq = inputfile.read(end-begin)
 			outputfile.write(actual_subseq)
 	
@@ -312,6 +320,7 @@ def prepare_dir(spbyfile, cmdargs) :
 	NB_PROCESS += 1
 	dirname = make_new_dir()
 	sp_to_files(spbyfile, cmdargs, dirname)
+	#print_files_debug(dirname)
 	return dirname
 
 
