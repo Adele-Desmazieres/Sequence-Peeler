@@ -244,7 +244,7 @@ def trigger_processes(cmdline, dirnamelist, priorities):
 		#print("Process running in:", dirname)
 		p = PopenExtended(cmdline, shell=True, cwd=dirname, stdout=PIPE, stderr=PIPE, prioritised=priorities[i])
 		dirnamedict[p] = dirname
-		#sleep(0.1) # launches process at different times
+		#sleep(0.1) # launches processes at different times
 
 	return dirnamedict
 
@@ -260,13 +260,12 @@ def wait_processes(desired_output, dirnamedict):
 
 		# check for terminated process
 		for p in processes:
-			if p.poll() is not None: # one of the process finished
+			if p.poll() is not None: # one of the processes finished
 				
 				#print(f"Process terminated on code {p.returncode}")
 				#for line in p.stdout:
 				#	print(line)
 				
-				# TODO : prioritize keeping first half and last half before keeping both
 				# if desired output
 				if compare_output((p.returncode, p.stdout, p.stderr), desired_output) :
 
