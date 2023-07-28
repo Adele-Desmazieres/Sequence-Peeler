@@ -10,3 +10,4 @@ Data/*.fasta
 **/schema_dossiers.pdf
 **/schema_dossiers.odg
 Divers/concurent
+*.prof
