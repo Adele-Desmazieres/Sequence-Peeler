@@ -12,6 +12,7 @@ import argparse
 NB_PROCESS = 0
 CHUNK_SIZE = 200_000_000 # char number, string of about 0.8 Go
 
+
 class SpecieData :
 	
 	def __init__(self, header, begin_seq, end_seq, filename) : # initialise the specie with one seq
@@ -37,8 +38,8 @@ class CmdArgs :
 		self.seqfilesnames = []
 		self.verbose = verbose
 		self.init_seqfilesnames()
-		self.fileregister = self.make_fileregister(self.get_all_files() + self.outfilesnames)
-		self.subcmdline_replaced = self.replace_path_in_cmd(self.get_all_files() + self.outfilesnames)
+		self.fileregister = self.make_fileregister(self.get_all_infiles() + self.outfilesnames)
+		self.subcmdline_replaced = self.replace_path_in_cmd(self.get_all_infiles() + self.outfilesnames)
 		print(self.fileregister)
 		print(self.subcmdline_replaced)
 	
@@ -48,7 +49,7 @@ class CmdArgs :
 		else :
 			self.seqfilesnames = fof_to_list(self.infilename)
 
-	def get_all_files(self) :
+	def get_all_infiles(self) :
 		return [self.infilename] if self.nofof else self.seqfilesnames + [self.infilename]
 		
 	def replace_path_in_cmd(self, files) :
@@ -58,11 +59,11 @@ class CmdArgs :
 		return cmd
 	
 	# returns the dict of filepath:renamedfile
-	# where renamedfile is the renamed file to assure that we don't copy 2 files with the same name in the same directory
+	# where renamedfile is either the filename or something else if there already is this filename
 	def make_fileregister(self, files) :
 		fileregister = dict()
 		for f in files :
-			i = 0
+			i = 1
 			p = Path(f)
 			tmpname = p.name
 			while tmpname in fileregister.values() :
@@ -75,18 +76,18 @@ class CmdArgs :
 class PopenExtended(Popen) :
 
 	def __init__(self, args, bufsize=-1, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=True, shell=False, cwd=None, env=None, universal_newlines=None, startupinfo=None, creationflags=0, restore_signals=True, start_new_session=False, pass_fds=(), *, encoding=None, errors=None, text=None, prioritised=True) :
-		self.prioritised = prioritised
+		self.prioritised = prioritised # new attribute
 		super().__init__(args=args, bufsize=bufsize, executable=executable, stdin=stdin, stdout=stdout, stderr=stderr, preexec_fn=preexec_fn, close_fds=close_fds, shell=shell, cwd=cwd, env=env, universal_newlines=universal_newlines, startupinfo=startupinfo, creationflags=creationflags, restore_signals=restore_signals, start_new_session=start_new_session, pass_fds=pass_fds, encoding=encoding, errors=errors, text=text)
 
 
-def printset(iseqs) :
+def printset_debug(iseqs) :
 	for sp in list(iseqs) :
 		print(sp)
 
 def print_debug(spbyfile) :
 	print("ACTUAL STATE")
 	for iseqs in spbyfile :
-		printset(iseqs)
+		printset_debug(iseqs)
 	print()
 
 def print_files_debug(dirname) :
@@ -100,20 +101,6 @@ def print_files_debug(dirname) :
 			print(f.read())
 		
 	print()
-
-
-### code from https://stackoverflow.com/a/26209275
-def chunks(fd, buffer_size=4096):
-	chunk = fd.read(buffer_size)
-	while chunk:
-		yield chunk
-		chunk = fd.read(buffer_size)
-
-def chars(fd, buffersize=4096):
-	for chunk in chunks(fd, buffersize):
-		for char in chunk:
-			yield char
-### end of code copy
 
 
 # writes the sequences and their species in a fasta file
@@ -193,7 +180,7 @@ def sp_to_files(spbyfile, cmdargs, dirname) :
 		
 		return None
 
-	files_to_truncate = cmdargs.get_all_files()
+	files_to_truncate = cmdargs.get_all_infiles()
 	outfofname = get_output_filename(cmdargs.infilename, cmdargs, dirname)
 	
 	try :
@@ -549,42 +536,7 @@ def parsing_multiple_files(filesnames) :
 	return spbyfile
 
 
-def rename_files(filesnames, old_extension, new_extension) :
-	for fname in filesnames : 
-		p = Path(fname)
-		old_fname = str(p.parent) + "/" + p.stem + old_extension + p.suffix
-		new_fname = str(p.parent) + "/" + p.stem + new_extension + p.suffix
-		if Path(old_fname).is_file() :
-			Path(old_fname).rename(Path(new_fname))
-
-
-# copies a file with the same name with an extension to its stem
-# ask the user to truncate it when it already exists
-# raise an error if a directory with its name already exists
-def copy_file_with_extension(filename, extension) :
-	p = Path(filename)
-	tmp_fname = str(p.parent) + "/" + p.stem + extension + p.suffix
-
-	try :
-		with open(tmp_fname, 'x') : # exclusive creation
-			shutilcopy(filename, tmp_fname)
-
-	except OSError :
-
-		if Path(tmp_fname).is_file() :
-			print(tmp_fname + " file already exists, unable to create it.")
-			truncate = input("Do you want to truncate " + tmp_fname + " ? (y,n) ")
-			if truncate == 'y' : 
-				shutilcopy(filename, tmp_fname)
-			else :
-				exit(0)
-		
-		else :
-			print(tmp_fname + " directory already exists, unable to create it.")
-			raise
-
-
-# returns the list of filenames in the fof (file of files)
+# returns the list of filenames (as string) in the file of files
 def fof_to_list(fofname) :
 	try :
 		with open(fofname) as fof :
@@ -602,11 +554,8 @@ def fof_to_list(fofname) :
 		raise
 
 
-def rm_file(filename) :
-	p = Path(filename)
-	p.unlink()
-
-
+# prepare the argument parser and parses the command line
+# returns an argparse.Namespace object
 def set_args() :
 	parser = argparse.ArgumentParser(prog="Genome Fuzzing")
 
@@ -641,7 +590,7 @@ if __name__=='__main__' :
 
 	cmdargs = CmdArgs(args.cmdline, infilename, nofof, args.outfilesnames, desired_output, args.verbose)
 	#cmdargs.init_seqfilesnames()
-	allfiles = cmdargs.get_all_files()
+	allfiles = cmdargs.get_all_infiles()
 
 	if cmdargs.verbose :
 		s = "\n - Desired output : " + str(cmdargs.desired_output) + "\n"
