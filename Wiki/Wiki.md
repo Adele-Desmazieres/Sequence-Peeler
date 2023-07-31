@@ -48,6 +48,6 @@ For example, to find the first nucleotide we halve the first half of the sequenc
 
 The most time-consumming operation of the program is to check if the command line still gives the desired output with the data. To reduce the duration of this subprocess, we parallelised the execution of the three checks on first half, second half and both halves of a sequence. 
 
-In practical, the sequences for each case are written in files in separate directories. Then the three process are launched at the same time in each directory. The first one that stops with the desired output triggers the interruption of the others. Except if it is the case where both sequences has to be kept, in this case we also check if any other process gives the desired output, and keep it instead if true. We did this to keep the minimum number of sequences during the execution. 
+In practical, the sequences for each case are written in files in separate directories. Then the three process are launched at the same time in each directory. The first one that stops with the desired output triggers the interruption of the others. Except if it is the process where both sequences has to be kept, then we check if any other process gives the desired output instead, before keeping it otherwise. We did this to keep the minimum number of sequences during the execution. 
 
 We continue the program with the sequences written in the directory of the first process with the desired output. 
