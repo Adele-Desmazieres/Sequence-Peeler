@@ -562,10 +562,10 @@ def set_args() :
 	# non positionnal arguments
 	parser.add_argument('-e', '--stderr', default=None)
 	parser.add_argument('-f', '--onefasta', action='store_true')
-	parser.add_argument('-r', '--returncode', default=None, type=int)
 	parser.add_argument('-o', '--outfilesnames', action='extend', nargs='+', type=str, default=[])
-	parser.add_argument('-v', '--verbose', action='store_true')
+	parser.add_argument('-r', '--returncode', default=None, type=int)
 	parser.add_argument('-u', '--stdout', default=None)
+	parser.add_argument('-v', '--verbose', action='store_true')
 
 	# positionnal arguments
 	parser.add_argument('filename')

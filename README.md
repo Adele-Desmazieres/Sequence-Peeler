@@ -1,6 +1,6 @@
-# Project : Genome Fuzzing
+# Project: Genome Fuzzing
 
-*Status : in developpment*
+*Status: in developpment*
 
 ## Description
 
@@ -8,7 +8,7 @@ This is a bioinformatic tool that founds the minimal input of fasta files for a 
 
 You have a commande line that does prolonged operations on a fasta file, and returns something. This program will run the command multiple times on reduced versions of the fasta file, to isolate the sub sequences that give the specified output. 
 
-The resulting files will be created in a "Result" directory, removing any previous one in the working directory. 
+See [Wiki.md](Wiki.md) to know more about the implementation. 
 
 
 ## Installation
@@ -19,28 +19,30 @@ Python3 is required.
 
 ## Usage
 
-### Reducing one fasta file
+### Reducing one fasta file (option -f)
 
-Run this in your console, from the "Code" directory : 
+To reduce one fasta file, you have to specify the fasta input file, the command line and the desired returncode. The path in the command line referencing the input file is specified with the filename positional argument. The paths to output files have to be identified with the -o flag. The other paths should be **absolute paths**. 
+
+Run this in your console, from the "Code" directory: 
 
 ```sh
 $ python3 minimise.py 
     <path/to/inputfile.fasta> 
     <"command line"> 
-    -r <value of desired returncode>
+    -r <desired value of returncode>
     -f
 ```
 
-For example : 
+For example: 
 ```sh
 $ python3 minimise.py 
     ../Data/example.fasta 
-    "python3 ../Data/executable.py ../Data/example.fasta" 
+    "python3 /path/to/Data/executable.py ../Data/example.fasta" 
     -r 1
     -f
 ```
 
-### Reducing multiple fasta files
+### Reducing multiple fasta files (without -f)
 
 A file of files (fof) is a textual file that contains a list of absolute paths to other files. 
 If your command line uses a file of fasta files as input, run this in your console :
@@ -52,50 +54,72 @@ $ python3 minimise.py
     -r <value of desired returncode>
 ```
 
-For example : 
+For example: 
 ```sh
 $ python3 minimise.py 
     ../Data/fof.txt 
-    "python3 ../Data/executable.py ../Data/fof.txt" 
+    "python3 /path/to/Data/executable.py ../Data/fof.txt" 
     -r 1
 ```
 
+
+### Results
+
+The resulting files will be created in a "Result" directory (removing any previous one). The file of files will contain the name of the resulting fasta files. They will contain the resulting minimised sequences. Each input / output file will be named with its original name, or with a number added at the end if another file already has the same name. 
+
+For example, when running from the Code directory:
+```sh
+$ python3 minimise.py 
+    ../Tests/fof3.txt 
+    "python3 /path/to/Tests/exe-fof.py ../Tests/fof3.txt" 
+    -r 1 
+```
+
+It will make a "Results" directory containing the files fof3.txt, t4.fasta and t4_1.fasta. 
+
+
 ### Options
 
-You have to specify at least one of these options : the desired return code (-r), standard output (-o) or standard error (-e). We will check for equality of the return code, and for the presence of the desired output/error inside the actual output/error message. You can specify multiple of them, to check that every condition is met. 
+You have to specify at least one of these options: the desired return code (-r), standard output (-u) or standard error (-e). The program will check for equality of the return code, and for the presence of the desired output/error inside the actual output/error message. You can specify multiple of them, to check that every condition is met. 
 
-The output files are created in the same directory as their original version. They will be named with the same name + "_result" + same extension. 
-
-Run this to print the options of the program :
+Run this to print the options of the program:
 ```sh
 $ python3 minimise.py -h
 ```
 
-You can specify the directory where the given command line should be run with the option -w. If not specified, it will be executed in the current directory. For example, from the Code directory :
-```sh
-$ python3 minimise.py 
-    ../Data/example.fasta 
-    "python3 executable.py example.fasta" 
-    -r 1
-    -f
-    -w ../Data 
-```
-
-You can also run the program from any directory, like so from the root of this project :
+You can specify some output files of the command to be copy-pasted in the same directory as input files with -o:
 ```sh
 $ python3 Code/minimise.py
     Tests/t2.fasta 
-    "python3 e1.py t2.fasta" 
-    -r 1
-    -f
-    -w Tests
+    "python3 e1.py t2.fasta out.txt" 
+    -r 1 -f -o out.txt
+```
+
+
+## Limits
+
+This program will always find a minimal exemple of sequences causing the desired output, except in the following case. If two fragments of the same sequence provoque the output, the program may return them separatly under two sequences, or it may returns them together with all the unnecessary nucleotids in between. 
+
+
+## Tests
+
+To run the tests, run from the Code directory:
+
+```sh
+python3 functionnal_tests.py
+```
+
+To only print the commands used in the tests, run this:
+
+```sh
+python3 functionnal_tests.py fake
 ```
 
 ## Author
 
 Adèle DESMAZIERES
 
-Contact : adesmaz.pro@gmail.com
+Contact: adesmaz.pro@gmail.com
 
 ## Licence
 

@@ -3,8 +3,8 @@ import filecmp
 import sys
 from pathlib import Path
 
-#ABSOLUTE_PATH_TO_EXE = "/home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/"
-ABSOLUTE_PATH_TO_EXE = "/home/yoshihiro/Documents/Pasteur-Genome-Fuzzing/Tests/"
+ABSOLUTE_PATH_TO_EXE = "/home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/"
+#ABSOLUTE_PATH_TO_EXE = "/home/yoshihiro/Documents/Pasteur-Genome-Fuzzing/Tests/"
 
 
 IN_EXE_OUT = [ \
@@ -66,7 +66,7 @@ FOF_EXE_OUT = [ \
         "\"python3 " + ABSOLUTE_PATH_TO_EXE + "exe-fof.py ../Tests/fof3.txt\" -r 1", \
         [("../Tests/fof3_expected.txt", "Results/fof3.txt"),
          ("../Tests/t4_fof3_expected.fasta", "Results/t4.fasta"), 
-         ("../Tests/Toto/t4_fof3_expected.fasta", "Results/t4_0.fasta")
+         ("../Tests/Toto/t4_fof3_expected.fasta", "Results/t4_1.fasta")
         ]) \
 ]
 
