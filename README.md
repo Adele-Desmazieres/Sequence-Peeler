@@ -8,7 +8,7 @@ This is a bioinformatic tool that founds the minimal input of fasta files for a 
 
 You have a commande line that does prolonged operations on a fasta file, and returns something. This program will run the command multiple times on reduced versions of the fasta file, to isolate the sub sequences that give the specified output. 
 
-See [Wiki.md](Wiki.md) to know more about the implementation. 
+See [Wiki.md](Wiki/Wiki.md) to know more about the implementation. 
 
 
 ## Installation
