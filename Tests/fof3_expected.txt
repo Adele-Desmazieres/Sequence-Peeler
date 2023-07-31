@@ -1,2 +1,2 @@
 t4.fasta
-t4_0.fasta
+t4_1.fasta

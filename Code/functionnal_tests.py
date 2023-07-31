@@ -1,3 +1,5 @@
+#!/bin/python3
+
 import subprocess
 import filecmp
 import sys
@@ -6,8 +8,8 @@ from pathlib import Path
 ABSOLUTE_PATH_TO_EXE = "/home/benoit/Documents/Stage-2023-Pasteur/Pasteur-Genome-Fuzzing/Tests/"
 #ABSOLUTE_PATH_TO_EXE = "/home/yoshihiro/Documents/Pasteur-Genome-Fuzzing/Tests/"
 
-
-IN_EXE_OUT = [ \
+def make_in_exe_out() :
+    in_exe_out = [ \
     ( \
         "../Tests/t0.fasta", \
         "\"python3 " + ABSOLUTE_PATH_TO_EXE + "e0.py ../Tests/t0.fasta\" -r 1 -f", \
@@ -40,9 +42,11 @@ IN_EXE_OUT = [ \
         "../Tests/t1.fasta", \
         "\"python3 " + ABSOLUTE_PATH_TO_EXE + "e4.py ../Tests/t1.fasta\" -r 1 -f", \
         "../Tests/t1_e4.fasta") \
-]
+    ]
+    return in_exe_out
 
-FOF_EXE_OUT = [ \
+def make_fof_ex_out() :
+    fof_exe_out = [ \
     ( \
         "../Tests/fof0.txt", \
         "\"python3 " + ABSOLUTE_PATH_TO_EXE + "exe-fof.py ../Tests/fof0.txt\" -r 1", \
@@ -68,7 +72,8 @@ FOF_EXE_OUT = [ \
          ("../Tests/t4_fof3_expected.fasta", "Results/t4.fasta"), 
          ("../Tests/Toto/t4_fof3_expected.fasta", "Results/t4_1.fasta")
         ]) \
-]
+    ]
+    return fof_exe_out
 
 EXTENSION = "_result"
 OKGREEN = '\033[92m'
@@ -100,10 +105,10 @@ class TestCmdData :
         return True
 
 
-def test_fof(cmdbegin) :
+def test_fof(cmdbegin, fof_exe_out) :
     c = 0
 
-    for (input, exe, expectedoutput) in FOF_EXE_OUT :
+    for (input, exe, expectedoutput) in fof_exe_out :
         t = TestCmdData(input, exe, expectedoutput)
         t.run(cmdbegin)
 
@@ -113,17 +118,17 @@ def test_fof(cmdbegin) :
         else : 
             print(WARNING + "Test raté." + ENDC + "\n")
     
-    if c == len(FOF_EXE_OUT) :
-        print(OKGREEN + str(c) + "/" + str(len(FOF_EXE_OUT)) + " tests réussis.\n" + ENDC)
+    if c == len(fof_exe_out) :
+        print(OKGREEN + str(c) + "/" + str(len(fof_exe_out)) + " tests réussis.\n" + ENDC)
         return True
     else :
-        print(WARNING + str(c) + "/" + str(len(FOF_EXE_OUT)) + " tests réussis.\n" + ENDC)
+        print(WARNING + str(c) + "/" + str(len(fof_exe_out)) + " tests réussis.\n" + ENDC)
         return False
 
 
-def test_fasta(cmdbegin) :
+def test_fasta(cmdbegin, in_exe_out) :
     c = 0
-    for (input, exe, expectedoutput) in IN_EXE_OUT :
+    for (input, exe, expectedoutput) in in_exe_out :
         
         cmdline = cmdbegin + " " + input + " " + exe
         print(cmdline)
@@ -139,21 +144,21 @@ def test_fasta(cmdbegin) :
         else : 
             print(WARNING + "Test raté." + ENDC + "\n")
     
-    if c == len(IN_EXE_OUT) :
-        print(OKGREEN + str(c) + "/" + str(len(IN_EXE_OUT)) + " tests réussis.\n" + ENDC)
+    if c == len(in_exe_out) :
+        print(OKGREEN + str(c) + "/" + str(len(in_exe_out)) + " tests réussis.\n" + ENDC)
         return True
     else :
-        print(WARNING + str(c) + "/" + str(len(IN_EXE_OUT)) + " tests réussis.\n" + ENDC)
+        print(WARNING + str(c) + "/" + str(len(in_exe_out)) + " tests réussis.\n" + ENDC)
         return False
 
 
-def printing_cmd(cmdbegin) :
-    for (input, exe, expectedoutput) in IN_EXE_OUT :
+def printing_cmd(cmdbegin, in_exe_out, fof_exe_out) :
+    for (input, exe, expectedoutput) in in_exe_out :
         cmdline = cmdbegin + " " + input + " " + exe
         print(cmdline)
         print()
     
-    for (input, exe, expectedoutput) in FOF_EXE_OUT :
+    for (input, exe, expectedoutput) in fof_exe_out :
         t = TestCmdData(input, exe, expectedoutput)
         print(t.buildcmd(cmdbegin))
         print()
@@ -161,11 +166,25 @@ def printing_cmd(cmdbegin) :
 
 
 if __name__=='__main__' :
-    cmdbegin = "python3 minimise.py"
-    if len(sys.argv) >= 2 :
-        if sys.argv[1] == "fake" :
-            printing_cmd(cmdbegin)
-            exit(0)
+    cmdbegin = "./minimise.py"
+
+    argc = len(sys.argv)
+
+    if argc >= 2 :
+        ABSOLUTE_PATH_TO_EXE = sys.argv[1]
+        ABSOLUTE_PATH_TO_EXE = ABSOLUTE_PATH_TO_EXE + "/" if ABSOLUTE_PATH_TO_EXE[-1] != "/" else ABSOLUTE_PATH_TO_EXE
+        in_exe_out = make_in_exe_out()
+        fof_exe_out = make_fof_ex_out()
+
+        if argc >= 3 and sys.argv[2] == "-n" :
+
+                printing_cmd(cmdbegin, in_exe_out, fof_exe_out)
+                exit(0)
+        
+        else :
             
-    test_fasta(cmdbegin)
-    test_fof(cmdbegin)
+            test_fasta(cmdbegin, in_exe_out)
+            test_fof(cmdbegin, fof_exe_out)
+
+    else :
+        print("Arguments Error : ./functionnal_tests.py </path/to/Tests> [-n]")

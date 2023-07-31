@@ -106,13 +106,13 @@ This program will always find a minimal exemple of sequences causing the desired
 To run the tests, run from the Code directory:
 
 ```sh
-python3 functionnal_tests.py
+python3 functionnal_tests.py /absolute/path/to/Tests
 ```
 
 To only print the commands used in the tests, run this:
 
 ```sh
-python3 functionnal_tests.py fake
+python3 functionnal_tests.py /absolute/path/to/Tests -n
 ```
 
 ## Author
