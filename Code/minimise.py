@@ -163,8 +163,8 @@ def get_output_filename(filename, cmdargs, dirname) :
 	return dirname + "/" + name
 
 
-# writes the content of the fof and call the function that writes their contents
-# reading from files with the input_extension, and writting in ones with the output_extension
+# writes the content of the fof in specified directory
+# and call the function that writes the content of the files of the fof
 def sp_to_files(spbyfile, cmdargs, dirname) :
 
 	if cmdargs.nofof : 
