@@ -40,9 +40,11 @@ For now, if one of multiple co-factor sequences is cut in half, we can not detec
 
 ### 5. Target sequence cutted in half
 
+![Fig5](wiki_fig5.png)
+
 If no previous case apply, it means that we tried to cut the target sequence in half. To reduce it to the minimum, we cut out some nucleotides at the begining and at the end of the sequence. We use binary search to find where are the first and the last nucleotides needed to cause the desired output.
 
-For example, to find the first nucleotide we halve the first half of the sequence to get two quarters. If the desired output is obtained without the first quarter, we remove it and continue the binary search on the second quarter. Else we keep the entire sequence for now and continue the search on the first quarter. With this method, we are sure to cut out exactly all unnecessary nucleotide. 
+For example, to find the first nucleotide we halve the first half of the sequence to get two quarters. If the desired output is obtained without the first quarter, we remove it and continue the binary search on the second quarter. Else we keep the entire sequence for now and continue the search on the first quarter. With this method, we are sure to cut out exactly all unnecessary nucleotides. 
 
 ## Subprocess parallelisation
 
@@ -50,4 +52,4 @@ The most time-consumming operation of the program is to check if the command lin
 
 In practical, the sequences for each case are written in files in separate directories. Then the three process are launched at the same time in each directory. The first one that stops with the desired output triggers the interruption of the others. Except if it is the process where both sequences has to be kept, then we check if any other process gives the desired output instead, before keeping it otherwise. We did this to keep the minimum number of sequences during the execution. 
 
-We continue the program with the sequences written in the directory of the first process with the desired output. 
+Then, we continue the program with the sequences written in the directory of the first process with the desired output. 
