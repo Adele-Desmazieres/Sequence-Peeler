@@ -35,8 +35,8 @@ class CmdArgs :
 		self.nofof = nofof
 		self.outfilesnames = outfilesnames
 		self.desired_output = desired_output
-		self.seqfilesnames = []
 		self.verbose = verbose
+		self.seqfilesnames = []
 		self.init_seqfilesnames()
 		self.fileregister = self.make_fileregister(self.get_all_infiles() + self.outfilesnames)
 		self.subcmdline_replaced = self.replace_path_in_cmd(self.get_all_infiles() + self.outfilesnames)
@@ -59,7 +59,7 @@ class CmdArgs :
 		return cmd
 	
 	# returns the dict of filepath:renamedfile
-	# where renamedfile is either the filename or something else if there already is this filename
+	# where renamedfile is either the filename or something else if this filename is already used
 	def make_fileregister(self, files) :
 		fileregister = dict()
 		for f in files :
@@ -71,8 +71,16 @@ class CmdArgs :
 				i += 1
 			fileregister[f] = tmpname
 		return fileregister
-			
-			
+	
+	def save_fileregister(self, filepath) :
+		infiles = self.get_all_infiles()
+		f = open(filepath, 'w')
+		for oldpath,newname in self.fileregister.items() :
+			if oldpath in infiles :
+				f.write(oldpath + " : " + newname + "\n")
+		f.close()
+
+
 class PopenExtended(Popen) :
 
 	def __init__(self, args, bufsize=-1, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=True, shell=False, cwd=None, env=None, universal_newlines=None, startupinfo=None, creationflags=0, restore_signals=True, start_new_session=False, pass_fds=(), *, encoding=None, errors=None, text=None, prioritised=True) :
@@ -589,7 +597,6 @@ if __name__=='__main__' :
 	nofof = args.onefasta
 
 	cmdargs = CmdArgs(args.cmdline, infilename, nofof, args.outfilesnames, desired_output, args.verbose)
-	#cmdargs.init_seqfilesnames()
 	allfiles = cmdargs.get_all_infiles()
 
 	if cmdargs.verbose :
@@ -612,9 +619,12 @@ if __name__=='__main__' :
 	# writes the reduced seqs in files in a new directory
 	sp_to_files(spbyfile, cmdargs, resultdir)
 	
+	# writes the file register
+	cmdargs.save_fileregister(resultdir + "/fileregister.txt")
+	
 	print("Process number : " + str(NB_PROCESS))
 	print_debug(spbyfile)
 	if args.verbose :
-		#print("\n", resultdir, " : ", sep="")
-		#print_files_debug(resultdir)
+		print("\n", resultdir, " : ", sep="")
+		print_files_debug(resultdir)
 		print("\nDone.")
