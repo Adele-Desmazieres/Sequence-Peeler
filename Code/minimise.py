@@ -1,15 +1,17 @@
 #!/bin/python3
 
-from time import sleep
+from time import sleep, time, gmtime, strftime
 from pathlib import Path
 from subprocess import Popen
 from subprocess import PIPE
 from shutil import rmtree
-from shutil import copy as shutilcopy
-from multiprocessing import Pool
 import argparse
 
-NB_PROCESS = 0
+NB_PROCESS_STARTED_SEQUENTIAL = 0
+NB_PROCESS_ENDED_SEQUENTIAL = 0
+NB_PROCESS_STARTED_PARALLEL = 0
+NB_PROCESS_ENDED_PARALLEL = 0
+NB_PROCESS_INTERRUPTED = 0
 CHUNK_SIZE = 200_000_000 # char number, string of about 0.8 Go
 
 
@@ -232,21 +234,33 @@ def compare_output(acutal_output, desired_output) :
 # launches the processes in the console, from a command and a list of directories
 # returns the dictionnary of process(Popen) : dirname(String)
 def trigger_processes(cmdline, dirnamelist, priorities):
-	dirnamedict = dict()
+	global NB_PROCESS_STARTED_SEQUENTIAL
+	global NB_PROCESS_STARTED_PARALLEL
 
-	for i in range(len(dirnamelist)):
+	dirnamedict = dict()
+	nb_proc = len(dirnamelist)
+
+	for i in range(nb_proc):
 		dirname = dirnamelist[i]
 		#print("Process running in:", dirname)
 		p = PopenExtended(cmdline, shell=True, cwd=dirname, stdout=PIPE, stderr=PIPE, prioritised=priorities[i])
 		dirnamedict[p] = dirname
 		#sleep(0.1) # launches processes at different times
 
+	if nb_proc == 1 :
+		NB_PROCESS_STARTED_SEQUENTIAL += nb_proc
+	else :
+		NB_PROCESS_STARTED_PARALLEL += nb_proc
+
 	return dirnamedict
 
 
 def wait_processes(desired_output, dirnamedict):
+	global NB_PROCESS_ENDED_SEQUENTIAL
+	global NB_PROCESS_INTERRUPTED
+
 	processes = list(dirnamedict.keys())
-	#print("processes : ", processes)
+	nb_proc = len(dirnamedict)
 	firstproc = None
 	tmpproc = None
 
@@ -257,9 +271,7 @@ def wait_processes(desired_output, dirnamedict):
 		for p in processes:
 			if p.poll() is not None: # one of the processes finished
 				
-				#print(f"Process terminated on code {p.returncode}")
-				#for line in p.stdout:
-				#	print(line)
+				processes.remove(p)
 				
 				# if desired output
 				if compare_output((p.returncode, p.stdout, p.stderr), desired_output) :
@@ -271,14 +283,17 @@ def wait_processes(desired_output, dirnamedict):
 						firstproc = p
 						for ptokill in processes :
 							ptokill.kill()
+							NB_PROCESS_INTERRUPTED += 1
 
 				# finalize the termination of the process
-				processes.remove(p)
 				p.communicate()
 				break
 
 		sleep(.001)
 	
+	if nb_proc == 1 :
+		NB_PROCESS_ENDED_SEQUENTIAL += 1
+
 	return firstproc if firstproc is not None else tmpproc
 
 
@@ -310,11 +325,8 @@ def make_new_dir() :
 
 
 def prepare_dir(spbyfile, cmdargs) :
-	global NB_PROCESS
-	NB_PROCESS += 1
 	dirname = make_new_dir()
 	sp_to_files(spbyfile, cmdargs, dirname)
-	#print_files_debug(dirname)
 	return dirname
 
 
@@ -580,13 +592,15 @@ def set_args() :
 	parser.add_argument('cmdline')
 	
 	args = parser.parse_args()
-	if not (args.returncode or args.stdout or args.stderr) :
+	if args.returncode is None and args.stdout is None and args.stderr is None :
 		parser.error("No output requested, add -r or -e or -u.")
 	
 	return args
 
 
 if __name__=='__main__' :
+
+	starttime = time()
 
 	# set and get the arguments
 	args = set_args()
@@ -622,8 +636,17 @@ if __name__=='__main__' :
 	# writes the file register
 	cmdargs.save_fileregister(resultdir + "/fileregister.txt")
 	
-	print("Process number : " + str(NB_PROCESS))
-	print_debug(spbyfile)
+	#print_debug(spbyfile)
+	NB_PROCESS_ENDED_PARALLEL = NB_PROCESS_STARTED_PARALLEL - NB_PROCESS_INTERRUPTED
+	print("NB_PROCESS_STARTED_SEQUENTIAL : " + str(NB_PROCESS_STARTED_SEQUENTIAL))
+	print("NB_PROCESS_ENDED_SEQUENTIAL : " + str(NB_PROCESS_ENDED_SEQUENTIAL))
+	print("NB_PROCESS_STARTED_PARALLEL : " + str(NB_PROCESS_STARTED_PARALLEL))
+	print("NB_PROCESS_ENDED_PARALLEL : " + str(NB_PROCESS_ENDED_PARALLEL))
+	print("NB_PROCESS_INTERRUPTED : " + str(NB_PROCESS_INTERRUPTED))
+
+	duration = time() - starttime
+	print("Duration: " + strftime("%H:%M:%S", gmtime(duration)))
+
 	if args.verbose :
 		print("\n", resultdir, " : ", sep="")
 		print_files_debug(resultdir)
