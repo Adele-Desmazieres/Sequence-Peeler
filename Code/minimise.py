@@ -574,6 +574,24 @@ def fof_to_list(fofname) :
 		raise
 
 
+def write_stats(duration, filepath) :
+	n = NB_PROCESS_STARTED_SEQUENTIAL + NB_PROCESS_STARTED_PARALLEL
+	n2 = NB_PROCESS_ENDED_SEQUENTIAL + NB_PROCESS_ENDED_PARALLEL
+	duration_str = strftime("%Hh %Mm %Ss", gmtime(duration))
+
+	s = "Duration of execution: " + duration_str + "\n"
+	s += "Number of processes started: " + str(n) + ", including\n" 
+	s += "\t* " + str(NB_PROCESS_STARTED_SEQUENTIAL) + " in sequential\n"
+	s += "\t* " + str(NB_PROCESS_STARTED_PARALLEL) + " in parallel\n"
+	s += "Number of processes ended by themselves: " + str(n2) + ", including\n" 
+	s += "\t* " + str(NB_PROCESS_ENDED_SEQUENTIAL) + " in sequential\n"
+	s += "\t* " + str(NB_PROCESS_ENDED_PARALLEL) + " in parallel"
+
+	f = open(filepath, 'w')
+	f.write(s)
+	f.close()
+
+
 # prepare the argument parser and parses the command line
 # returns an argparse.Namespace object
 def set_args() :
@@ -636,16 +654,9 @@ if __name__=='__main__' :
 	# writes the file register
 	cmdargs.save_fileregister(resultdir + "/fileregister.txt")
 	
-	#print_debug(spbyfile)
 	NB_PROCESS_ENDED_PARALLEL = NB_PROCESS_STARTED_PARALLEL - NB_PROCESS_INTERRUPTED
-	print("NB_PROCESS_STARTED_SEQUENTIAL : " + str(NB_PROCESS_STARTED_SEQUENTIAL))
-	print("NB_PROCESS_ENDED_SEQUENTIAL : " + str(NB_PROCESS_ENDED_SEQUENTIAL))
-	print("NB_PROCESS_STARTED_PARALLEL : " + str(NB_PROCESS_STARTED_PARALLEL))
-	print("NB_PROCESS_ENDED_PARALLEL : " + str(NB_PROCESS_ENDED_PARALLEL))
-	print("NB_PROCESS_INTERRUPTED : " + str(NB_PROCESS_INTERRUPTED))
-
 	duration = time() - starttime
-	print("Duration: " + strftime("%H:%M:%S", gmtime(duration)))
+	write_stats(duration, resultdir + "/stats.txt")
 
 	if args.verbose :
 		print("\n", resultdir, " : ", sep="")
