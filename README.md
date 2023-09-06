@@ -1,14 +1,17 @@
-# Project: Genome Fuzzing
+# Project : Sequence Peeler
 
 *Status: in developpment*
 
 ## Description
 
-This is a bioinformatic tool that founds the minimal input of fasta files for a specified command line giving a specified output. It can find one or many fragments of sequences that cause an error or any other output. This allows the user to automatically isolate the problematic nucleotides instead of searching by hand. 
+seqpeel is a tool to help bioinfo developers to extract minimal examples (minimal set of small sequences) that produce a certain software behavious.
+For example, if your software is ending with an error code, seqpeel will reduce your input file(s) until the bug disapears.
+It will then return the last input the triggered the error code.
 
-You have a commande line that does prolonged operations on a fasta file, and returns something. This program will run the command multiple times on reduced versions of the fasta file, to isolate the sub sequences that give the specified output. 
+Both software return code or terminal outputs can be used to trigger the sequence peeler.
+The peeling process is done by recursive calls of the software with dichotomic-like reductions of the input(s).
 
-See [Wiki.md](Wiki/Wiki.md) to know more about the implementation. 
+See [Wiki.md](Wiki/Wiki.md) for more information on the algorithmic side.
 
 
 ## Installation
@@ -19,27 +22,42 @@ Python3 is required.
 
 ## Usage
 
-### Reducing one fasta file (option -f)
+3 hooks can be used to track a behavior: The program return code, stdout, stderr (or combinations of them)
+The return code can be tracked using the `-r <code>` option, stdout with `-u <text-to-track>` and stderr with `-e <text-to-track>`.
+These options can be used if you are peeling one file or a set of files.
+
+
+### Reducing one fasta file
 
 To reduce one fasta file, you have to specify the fasta input file, the command line and the desired returncode. The path in the command line referencing the input file is specified with the filename positional argument. The paths to output files have to be identified with the -o flag. The other paths should be **absolute paths**. 
 
-Run this in your console, from the "Code" directory: 
+The minimal command must be:
 
 ```sh
-$ python3 minimise.py 
-    <path/to/inputfile.fasta> 
-    <"command line"> 
-    -r <desired value of returncode>
-    -f
+$ python3 minimise.py \
+    -f <path/to/inputfile.fasta> \
+    -c <"command line that raise the behavious of interest"> \
+    -o <list of output files in the command> \
+    [-r <desired value of returncode>] [-u <stdout text>] [-e <stderr text>] # pick at least one
 ```
 
-For example: 
-```sh
+
+An example where we suppose that we are tracking a segmentation fault on stderr that is raised by the following command:
+```bash
+	myprogram --input mydata.fasta --uselessval 3 --output out.txt --stats stats.txt
+```
+
+In this command we want to peel `mydata.fasta` such as the segmentation fault is still raised.
+`out.txt` and `stats.txt` must be considered as outputs because they are generated at each execution of the program.
+
+
+So the command must be: 
+```bash
 $ python3 minimise.py 
-    ../Data/example.fasta 
-    "python3 /path/to/Data/executable.py ../Data/example.fasta" 
-    -r 1
-    -f
+    -f mydata.fasta \
+    -c "myprogram --input mydata.fasta --uselessval 3 --output out.txt --stats stats.txt" \
+    -o out.txt stats.txt \
+    -e "segmentation fault"
 ```
 
 ### Reducing multiple fasta files (without -f)
