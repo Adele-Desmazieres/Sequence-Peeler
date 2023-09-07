@@ -2,6 +2,7 @@ User interactions:
 * Allow relative paths
 * Control the number of subprocesses
 * Move the -f before the input file
+* Create a -m option for multiple file reduction
 * Add -c for the command
 * Add the possibility to have long/short command line names
 

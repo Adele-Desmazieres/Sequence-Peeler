@@ -32,13 +32,12 @@ These options can be used if you are peeling one file or a set of files.
 To reduce one fasta file, you have to specify the fasta input file, the command line and the desired returncode. The path in the command line referencing the input file is specified with the filename positional argument. The paths to output files have to be identified with the -o flag. The other paths should be **absolute paths**. 
 
 The minimal command must be:
-
 ```sh
-$ python3 minimise.py \
-    -f <path/to/inputfile.fasta> \
-    -c <"command line that raise the behavious of interest"> \
-    -o <list of output files in the command> \
-    [-r <desired value of returncode>] [-u <stdout text>] [-e <stderr text>] # pick at least one
+    python3 minimise.py \
+      -f <path/to/inputfile.fasta> \
+      -c <"command line that raise the behavious of interest"> \
+      -o <list of output files in the command> \
+      [-r <desired value of returncode>] [-u <stdout text>] [-e <stderr text>] # pick at least one
 ```
 
 
@@ -50,34 +49,47 @@ An example where we suppose that we are tracking a segmentation fault on stderr 
 In this command we want to peel `mydata.fasta` such as the segmentation fault is still raised.
 `out.txt` and `stats.txt` must be considered as outputs because they are generated at each execution of the program.
 
-
-So the command must be: 
+Corresponding command example: 
 ```bash
-$ python3 minimise.py 
-    -f mydata.fasta \
-    -c "myprogram --input mydata.fasta --uselessval 3 --output out.txt --stats stats.txt" \
-    -o out.txt stats.txt \
-    -e "segmentation fault"
+    python3 minimise.py \
+      -f mydata.fasta \
+      -c "myprogram --input mydata.fasta --uselessval 3 --output out.txt --stats stats.txt" \
+      -o out.txt stats.txt \
+      -e "segmentation fault"
 ```
 
-### Reducing multiple fasta files (without -f)
+### Reducing multiple files
 
-A file of files (fof) is a textual file that contains a list of absolute paths to other files. 
-If your command line uses a file of fasta files as input, run this in your console :
+If you want to reduce a set of fasta files, you must indicate the file list in a file of files.
+Then you have to use the `-m` option to give the fof to seqpeel.
 
-```sh
-$ python3 minimise.py 
-    <path/to/fof.txt> 
-    <"command line"> 
-    -r <value of desired returncode>
+Command:
+```bash
+    python3 minimise.py \
+      -m <path/to/fileoffiles.txt> \
+      -c <"command line that raise the behavious of interest"> \
+      -o <list of output files in the command> \
+      [-r <desired value of returncode>] [-u <stdout text>] [-e <stderr text>] # pick at least one
 ```
 
-For example: 
+Modified command line example:
+```bash
+    myprogram --R1 mydata_R1.fasta --R2 mydata_R2.fasta --uselessval 3 --output out.txt --stats stats.txt
+```
+
+Peeling the example: 
 ```sh
-$ python3 minimise.py 
-    ../Data/fof.txt 
-    "python3 /path/to/Data/executable.py ../Data/fof.txt" 
-    -r 1
+    python3 minimise.py \
+      -m fof.txt \
+      -c "myprogram --R1 mydata_R1.fasta --R2 mydata_R2.fasta --uselessval 3 --output out.txt --stats stats.txt" \
+      -o out.txt stats.txt \
+      -e "segmentation fault"
+```
+
+`fof.txt`
+```
+    mydata_R1.fasta
+    mydata_R2.fasta
 ```
 
 
