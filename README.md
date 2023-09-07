@@ -108,23 +108,6 @@ $ python3 minimise.py
 It will make a "Results" directory containing the files fof3.txt, t4.fasta and t4_1.fasta. 
 
 
-### Options
-
-You have to specify at least one of these options: the desired return code (-r), standard output (-u) or standard error (-e). The program will check for equality of the return code, and for the presence of the desired output/error inside the actual output/error message. You can specify multiple of them, to check that every condition is met. 
-
-Run this to print the options of the program:
-```sh
-$ python3 minimise.py -h
-```
-
-You can specify some output files of the command to be copy-pasted in the same directory as input files with -o:
-```sh
-$ python3 Code/minimise.py
-    Tests/t2.fasta 
-    "python3 e1.py t2.fasta out.txt" 
-    -r 1 -f -o out.txt
-```
-
 
 ## Limits
 
@@ -145,14 +128,16 @@ To only print the commands used in the tests, run this:
 python3 functionnal_tests.py /absolute/path/to/Tests -n
 ```
 
-## Author
+## Authors
 
 Adèle DESMAZIERES
-
 Contact: adesmaz.pro@gmail.com
+
+Yoann DUFRESNE
+Contact: yoann.dufresne@pasteur.fr
 
 ## Licence
 
 GNU AFFERO, GPL3
 
-Licence change request : adesmaz.pro@gmail.com
+Licence change request is possible by contacting : adesmaz.pro@gmail.com, yoann.dufresne@pasteur.fr
