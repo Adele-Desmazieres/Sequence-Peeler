@@ -578,7 +578,7 @@ def set_args() :
 	return args
 
 
-if __name__=='__main__' :
+def main():
 
 	# set and get the arguments
 	args = set_args()
@@ -618,3 +618,8 @@ if __name__=='__main__' :
 		#print("\n", resultdir, " : ", sep="")
 		#print_files_debug(resultdir)
 		print("\nDone.")
+
+
+if __name__=='__main__' :
+	main()
+	

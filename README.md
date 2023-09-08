@@ -16,9 +16,15 @@ See [Wiki.md](Wiki/Wiki.md) for more information on the algorithmic side.
 
 ## Installation
 
-Download the code from [Github](https://github.com/Adele-Desmazieres/Pasteur-Genome-Fuzzing). 
+```bash
+    git clone --recursive https://github.com/Adele-Desmazieres/Pasteur-Genome-Fuzzing seqpeeler
+    cd seqpeeler
+    pip install . # Add -e to install in code edition mode
+```
 
-Python3 is required. 
+Dependancies:
+* pip>=23.2.0
+* setuptools>=61.0
 
 ## Usage
 
