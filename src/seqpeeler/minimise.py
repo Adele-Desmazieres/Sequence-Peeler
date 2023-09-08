@@ -1,15 +1,17 @@
 #!/bin/python3
 
-from time import sleep
+from time import sleep, time, gmtime, strftime
 from pathlib import Path
 from subprocess import Popen
 from subprocess import PIPE
 from shutil import rmtree
-from shutil import copy as shutilcopy
-from multiprocessing import Pool
 import argparse
 
-NB_PROCESS = 0
+NB_PROCESS_STARTED_SEQUENTIAL = 0
+NB_PROCESS_ENDED_SEQUENTIAL = 0
+NB_PROCESS_STARTED_PARALLEL = 0
+NB_PROCESS_ENDED_PARALLEL = 0
+NB_PROCESS_INTERRUPTED = 0
 CHUNK_SIZE = 200_000_000 # char number, string of about 0.8 Go
 
 
@@ -35,8 +37,8 @@ class CmdArgs :
 		self.nofof = nofof
 		self.outfilesnames = outfilesnames
 		self.desired_output = desired_output
-		self.seqfilesnames = []
 		self.verbose = verbose
+		self.seqfilesnames = []
 		self.init_seqfilesnames()
 		self.fileregister = self.make_fileregister(self.get_all_infiles() + self.outfilesnames)
 		self.subcmdline_replaced = self.replace_path_in_cmd(self.get_all_infiles() + self.outfilesnames)
@@ -59,7 +61,7 @@ class CmdArgs :
 		return cmd
 	
 	# returns the dict of filepath:renamedfile
-	# where renamedfile is either the filename or something else if there already is this filename
+	# where renamedfile is either the filename or something else if this filename is already used
 	def make_fileregister(self, files) :
 		fileregister = dict()
 		for f in files :
@@ -71,8 +73,16 @@ class CmdArgs :
 				i += 1
 			fileregister[f] = tmpname
 		return fileregister
-			
-			
+	
+	def save_fileregister(self, filepath) :
+		infiles = self.get_all_infiles()
+		f = open(filepath, 'w')
+		for oldpath,newname in self.fileregister.items() :
+			if oldpath in infiles :
+				f.write(oldpath + " : " + newname + "\n")
+		f.close()
+
+
 class PopenExtended(Popen) :
 
 	def __init__(self, args, bufsize=-1, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=True, shell=False, cwd=None, env=None, universal_newlines=None, startupinfo=None, creationflags=0, restore_signals=True, start_new_session=False, pass_fds=(), *, encoding=None, errors=None, text=None, prioritised=True) :
@@ -224,21 +234,33 @@ def compare_output(acutal_output, desired_output) :
 # launches the processes in the console, from a command and a list of directories
 # returns the dictionnary of process(Popen) : dirname(String)
 def trigger_processes(cmdline, dirnamelist, priorities):
-	dirnamedict = dict()
+	global NB_PROCESS_STARTED_SEQUENTIAL
+	global NB_PROCESS_STARTED_PARALLEL
 
-	for i in range(len(dirnamelist)):
+	dirnamedict = dict()
+	nb_proc = len(dirnamelist)
+
+	for i in range(nb_proc):
 		dirname = dirnamelist[i]
 		#print("Process running in:", dirname)
 		p = PopenExtended(cmdline, shell=True, cwd=dirname, stdout=PIPE, stderr=PIPE, prioritised=priorities[i])
 		dirnamedict[p] = dirname
 		#sleep(0.1) # launches processes at different times
 
+	if nb_proc == 1 :
+		NB_PROCESS_STARTED_SEQUENTIAL += nb_proc
+	else :
+		NB_PROCESS_STARTED_PARALLEL += nb_proc
+
 	return dirnamedict
 
 
 def wait_processes(desired_output, dirnamedict):
+	global NB_PROCESS_ENDED_SEQUENTIAL
+	global NB_PROCESS_INTERRUPTED
+
 	processes = list(dirnamedict.keys())
-	#print("processes : ", processes)
+	nb_proc = len(dirnamedict)
 	firstproc = None
 	tmpproc = None
 
@@ -249,9 +271,7 @@ def wait_processes(desired_output, dirnamedict):
 		for p in processes:
 			if p.poll() is not None: # one of the processes finished
 				
-				#print(f"Process terminated on code {p.returncode}")
-				#for line in p.stdout:
-				#	print(line)
+				processes.remove(p)
 				
 				# if desired output
 				if compare_output((p.returncode, p.stdout, p.stderr), desired_output) :
@@ -263,14 +283,17 @@ def wait_processes(desired_output, dirnamedict):
 						firstproc = p
 						for ptokill in processes :
 							ptokill.kill()
+							NB_PROCESS_INTERRUPTED += 1
 
 				# finalize the termination of the process
-				processes.remove(p)
 				p.communicate()
 				break
 
 		sleep(.001)
 	
+	if nb_proc == 1 :
+		NB_PROCESS_ENDED_SEQUENTIAL += 1
+
 	return firstproc if firstproc is not None else tmpproc
 
 
@@ -302,11 +325,8 @@ def make_new_dir() :
 
 
 def prepare_dir(spbyfile, cmdargs) :
-	global NB_PROCESS
-	NB_PROCESS += 1
 	dirname = make_new_dir()
 	sp_to_files(spbyfile, cmdargs, dirname)
-	#print_files_debug(dirname)
 	return dirname
 
 
@@ -554,6 +574,24 @@ def fof_to_list(fofname) :
 		raise
 
 
+def write_stats(duration, filepath) :
+	n = NB_PROCESS_STARTED_SEQUENTIAL + NB_PROCESS_STARTED_PARALLEL
+	n2 = NB_PROCESS_ENDED_SEQUENTIAL + NB_PROCESS_ENDED_PARALLEL
+	duration_str = strftime("%Hh %Mm %Ss", gmtime(duration))
+
+	s = "Duration of execution: " + duration_str + "\n"
+	s += "Number of processes started: " + str(n) + ", including\n" 
+	s += "\t* " + str(NB_PROCESS_STARTED_SEQUENTIAL) + " in sequential\n"
+	s += "\t* " + str(NB_PROCESS_STARTED_PARALLEL) + " in parallel\n"
+	s += "Number of processes ended by themselves: " + str(n2) + ", including\n" 
+	s += "\t* " + str(NB_PROCESS_ENDED_SEQUENTIAL) + " in sequential\n"
+	s += "\t* " + str(NB_PROCESS_ENDED_PARALLEL) + " in parallel"
+
+	f = open(filepath, 'w')
+	f.write(s)
+	f.close()
+
+
 # prepare the argument parser and parses the command line
 # returns an argparse.Namespace object
 def set_args() :
@@ -572,13 +610,15 @@ def set_args() :
 	parser.add_argument('cmdline')
 	
 	args = parser.parse_args()
-	if not (args.returncode or args.stdout or args.stderr) :
+	if args.returncode is None and args.stdout is None and args.stderr is None :
 		parser.error("No output requested, add -r or -e or -u.")
 	
 	return args
 
 
 def main():
+
+	starttime = time()
 
 	# set and get the arguments
 	args = set_args()
@@ -589,7 +629,6 @@ def main():
 	nofof = args.onefasta
 
 	cmdargs = CmdArgs(args.cmdline, infilename, nofof, args.outfilesnames, desired_output, args.verbose)
-	#cmdargs.init_seqfilesnames()
 	allfiles = cmdargs.get_all_infiles()
 
 	if cmdargs.verbose :
@@ -612,11 +651,16 @@ def main():
 	# writes the reduced seqs in files in a new directory
 	sp_to_files(spbyfile, cmdargs, resultdir)
 	
-	print("Process number : " + str(NB_PROCESS))
-	print_debug(spbyfile)
+	# writes the file register
+	cmdargs.save_fileregister(resultdir + "/fileregister.txt")
+	
+	NB_PROCESS_ENDED_PARALLEL = NB_PROCESS_STARTED_PARALLEL - NB_PROCESS_INTERRUPTED
+	duration = time() - starttime
+	write_stats(duration, resultdir + "/stats.txt")
+
 	if args.verbose :
-		#print("\n", resultdir, " : ", sep="")
-		#print_files_debug(resultdir)
+		print("\n", resultdir, " : ", sep="")
+		print_files_debug(resultdir)
 		print("\nDone.")
 
 
