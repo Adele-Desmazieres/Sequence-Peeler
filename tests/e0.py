@@ -1,6 +1,7 @@
 
 
 if __name__ == '__main__' :
-    raise Exception("Cet exécutable provoque toujours une exception.")
+    print("Error program that raise an exception in any case")
+    raise Exception("Raise an exception anyway.")
 
 

@@ -3,4 +3,4 @@ name = "seqpeeler"
 version = "0.1"
 
 [project.scripts]
-seqpeeler = 'seqpeeler.minimise:main'
+seqpeeler = 'seqpeeler.main:main'
