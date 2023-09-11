@@ -236,14 +236,14 @@ def trigger_and_wait_processes(cmdargs, dirnamelist, priorities=None) :
 	
 
 
-def make_new_dir(results_dir) :
-	return ExperimentDirectory(results_dir)
+# def make_new_dir(results_dir) :
+# 	return ExperimentDirectory(results_dir)
 
 
-def prepare_dir(spbyfile, args) :
-	dirname = make_new_dir(args.outdir)
-	sp_to_files(spbyfile, args, dirname)
-	return dirname
+# def prepare_dir(spbyfile, args) :
+# 	dirname = make_new_dir(args.outdir)
+# 	sp_to_files(spbyfile, args, dirname)
+# 	return dirname
 
 
 # reduces the sequence, cutting first and last nucleotides
@@ -290,7 +290,7 @@ def strip_sequence(seq, sp, spbyfile, flag_begining, cmdargs) :
 
 # reduces the sequences of the specie and puts it in the list spbyfile
 # use an iterative binary search, returns nothing
-def reduce_specie(sp, spbyfile, cmdargs) :
+def reduce_uniq_file(, cmdargs) :
 	
 	tmpsubseqs = sp.subseqs.copy()
 	
@@ -373,20 +373,22 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 
 
 # returns every reduced sequences of a file in a list of SpecieData
+# Note: This function rely on side effects. This is reducing 1 file in a possible contect of multiple files
+# TODO: Rewrite it without side effects
 def reduce_one_file(file_manager, args) :
-	copy_iseqs = iseqs.copy()
+	# copy_iseqs = iseqs.copy()
 
-	for sp in copy_iseqs :
-		# check if desired output is obtained whithout the sequence of the specie
-		iseqs.remove(sp)
+	# for sp in copy_iseqs :
+	# 	# check if desired output is obtained whithout the sequence of the specie
+	# 	iseqs.remove(sp)
 		
-		dirname = prepare_dir(spbyfile, cmdargs)
-		firstdirname = trigger_and_wait_processes(cmdargs, [dirname])
-		rmtree(dirname)
+	# 	dirname = prepare_dir(spbyfile, cmdargs)
+	# 	firstdirname = trigger_and_wait_processes(cmdargs, [dirname])
+	# 	rmtree(dirname)
 
-		if firstdirname is None :
-			# otherwise reduces the sequence
-			iseqs.append(sp)
+	# 	if firstdirname is None :
+	# 		# otherwise reduces the sequence
+	# 		iseqs.append(sp)
 
 	for sp in iseqs :
 		reduce_specie(sp, spbyfile, cmdargs)
@@ -397,7 +399,7 @@ def reduce_one_file(file_manager, args) :
 def reduce_file_set(file_managers, args) :
 	
 	if len(file_managers) == 1 :
-		reduce_one_file(file_managers[0], file_managers, args)
+		reduce_one_file(file_managers[0], args)
 		return file_managers
 	
 	raise NotImplementedError("Multiple files not implemented")

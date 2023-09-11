@@ -13,6 +13,9 @@ class SequenceHolder:
 	def size(self):
 		return self.right - self.left + 1
 
+	def copy(self):
+		return SequenceHolder(self.left, self.right)
+
 	def __repr__(self):
 		return f"({self.left} : {self.right})"
 
@@ -51,7 +54,8 @@ class FileManager:
 
 
 	def index_sequences(self):
-		""" Index the positions of the sequences in the file
+		""" Index the positions of the sequences in the file.
+			TODO: keep track of the sequence order
 		"""
 		self.index = {}
 
@@ -74,6 +78,32 @@ class FileManager:
 
 			# last sequence
 			self._index_sequence(header, seqstart, filepos)
+
+
+	def copy(self):
+		copy = FileManager(self.filename)
+		
+		copy.index = None if self.index is None else {}
+		if self.index is not None:
+			for name in self.index:
+				copy.index[name] = self.index[name].copy()
+
+		copy.total_seq_size = self.total_seq_size
+		other.verbose = self.verbose
+
+
+class ExperimentContent:
+	def __init__(self):
+		self.input_files = {}
+		self.output_files = {}
+
+	def copy(self):
+		copy = ExperimentContent()
+
+		copy.input_files = {name: self.input_files[name].copy() for name in self.input_files}
+		copy.output_files = {name: self.output_files[name] for name in self.output_files}
+
+		return copy
 
 
 class ExperimentDirectory:
