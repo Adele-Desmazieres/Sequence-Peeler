@@ -4,6 +4,9 @@ from subprocess import Popen
 from subprocess import PIPE
 from shutil import rmtree
 
+from seqpeeler.filemanager import ExperimentDirectory
+
+
 NB_PROCESS_STARTED_SEQUENTIAL = 0
 NB_PROCESS_ENDED_SEQUENTIAL = 0
 NB_PROCESS_STARTED_PARALLEL = 0
@@ -28,18 +31,6 @@ def print_debug(spbyfile) :
 	print("ACTUAL STATE")
 	for iseqs in spbyfile :
 		printset_debug(iseqs)
-	print()
-
-def print_files_debug(dirname) :
-	pdir = Path(dirname)
-	for filename in pdir.iterdir() :
-		p = Path(filename)
-		outputfilename = dirname + "/" + p.name
-		
-		print("\nIn file \"" + outputfilename + "\" :\n")
-		with open(outputfilename) as f :
-			print(f.read())
-		
 	print()
 
 
@@ -244,19 +235,14 @@ def trigger_and_wait_processes(cmdargs, dirnamelist, priorities=None) :
 		return dirnamedict.get(firstproc)
 	
 
-def make_new_dir() :
-	i = 0
-	dirname = str(i)
-	while Path(dirname).exists() :
-		i += 1
-		dirname = str(i)
-	Path(dirname).mkdir()
-	return dirname
+
+def make_new_dir(results_dir) :
+	return ExperimentDirectory(results_dir)
 
 
-def prepare_dir(spbyfile, cmdargs) :
-	dirname = make_new_dir()
-	sp_to_files(spbyfile, cmdargs, dirname)
+def prepare_dir(spbyfile, args) :
+	dirname = make_new_dir(args.outdir)
+	sp_to_files(spbyfile, args, dirname)
 	return dirname
 
 
@@ -387,7 +373,7 @@ def reduce_specie(sp, spbyfile, cmdargs) :
 
 
 # returns every reduced sequences of a file in a list of SpecieData
-def reduce_one_file(iseqs, spbyfile, cmdargs) :
+def reduce_one_file(file_manager, args) :
 	copy_iseqs = iseqs.copy()
 
 	for sp in copy_iseqs :
@@ -408,30 +394,31 @@ def reduce_one_file(iseqs, spbyfile, cmdargs) :
 	return iseqs
 
 
-def reduce_all_files(spbyfile, cmdargs) :
+def reduce_file_set(file_managers, args) :
 	
-	if len(spbyfile) == 1 :
-		reduce_one_file(spbyfile[0], spbyfile, cmdargs)
-		return spbyfile
+	if len(file_managers) == 1 :
+		reduce_one_file(file_managers[0], file_managers, args)
+		return file_managers
 	
-	copy_spbyfile = spbyfile.copy()
+	raise NotImplementedError("Multiple files not implemented")
+	copy_spbyfile = file_managers.copy()
 
 	for iseqs in copy_spbyfile :
 		# check if desired output is obtained whithout the file
-		spbyfile.remove(iseqs)
+		file_managers.remove(iseqs)
 
-		dirname = prepare_dir(spbyfile, cmdargs)
+		dirname = prepare_dir(file_managers, cmdargs)
 		firstdirname = trigger_and_wait_processes(cmdargs, [dirname])
 		rmtree(dirname)
 
 		if firstdirname is None :
 			# otherwise reduces the sequences of the file
-			spbyfile.append(iseqs)
+			file_managers.append(iseqs)
 
-	for iseqs in spbyfile :
-		reduce_one_file(iseqs, spbyfile, cmdargs)
+	for iseqs in file_managers :
+		reduce_one_file(iseqs, file_managers, cmdargs)
 
-	return spbyfile
+	return file_managers
 
 
 

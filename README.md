@@ -17,17 +17,19 @@ See [Wiki.md](Wiki/Wiki.md) for more information on the algorithmic side.
 ## Installation
 
 ```bash
-    git clone --recursive https://github.com/Adele-Desmazieres/Pasteur-Genome-Fuzzing seqpeeler
+    git clone https://github.com/Adele-Desmazieres/Pasteur-Genome-Fuzzing seqpeeler
     cd seqpeeler
-    pip install . # Add -e to install in code edition mode
+    pip install . # Add -e to install in edit mode
 ```
 
-Dependancies:
+### Dependancies
+* python>=3.10
 * pip>=23.2.0
 * setuptools>=61.0
 
 ## Usage
 
+Seqpeeler uses hooks in the outputs of the software of interest to determine if the behaviour is still present along the executions.
 3 hooks can be used to track a behavior: The program return code, stdout, stderr (or combinations of them)
 The return code can be tracked using the `-r <code>` option, stdout with `-u <text-to-track>` and stderr with `-e <text-to-track>`.
 These options can be used if you are peeling one file or a set of files.

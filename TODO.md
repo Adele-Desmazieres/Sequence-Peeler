@@ -1,10 +1,11 @@
 # User interactions
 
-* Allow relative paths
+* Allow relative paths [In progress]
 * Control the number of subprocesses
 * Move the -f before the input file
 * Create a -m option for multiple file reduction
 * Add -c for the command
+* Verify presence of input files
 
 # Code optimisations
 * Create a task scheduler.
